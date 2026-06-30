@@ -14,6 +14,17 @@ async function requireUser() {
   return session;
 }
 
+async function requireAdmin() {
+  const session = await requireUser();
+  const rows = await sql`
+    select g.level from users u
+    left join grades g on g.id = u.grade_id
+    where u.id = ${session.uid}`;
+  if (!rows.length || Number(rows[0].level ?? 0) < 100)
+    throw new Error("관리자 권한이 필요합니다.");
+  return session;
+}
+
 function setSessionCookie(token: string) {
   cookies().set(SESSION_COOKIE, token, {
     httpOnly: true,
@@ -28,39 +39,110 @@ export async function signUp(
   email: string,
   password: string
 ): Promise<{ ok: boolean; error?: string }> {
-  email = (email || "").trim().toLowerCase();
-  if (!email || !password) return { ok: false, error: "이메일과 비밀번호를 입력하세요." };
-  if (password.length < 6) return { ok: false, error: "비밀번호는 6자 이상이어야 합니다." };
+  try {
+    email = (email || "").trim().toLowerCase();
+    if (!email || !password) return { ok: false, error: "이메일과 비밀번호를 입력하세요." };
+    if (password.length < 6) return { ok: false, error: "비밀번호는 6자 이상이어야 합니다." };
 
-  const existing = await sql`select id from users where email = ${email}`;
-  if (existing.length) return { ok: false, error: "이미 가입된 이메일입니다." };
+    const existing = await sql`select id from users where email = ${email}`;
+    if (existing.length) return { ok: false, error: "이미 가입된 이메일입니다." };
 
-  const hash = await bcrypt.hash(password, 10);
-  const rows = await sql`
-    insert into users (email, password_hash) values (${email}, ${hash})
-    returning id, email`;
-  const u = rows[0];
-  const token = await signSession({ uid: Number(u.id), email: u.email });
-  setSessionCookie(token);
-  return { ok: true };
+    // 첫 번째 가입자는 자동으로 관리자 + 승인
+    const cnt = await sql`select count(*)::int as n from users`;
+    const isFirst = Number(cnt[0].n) === 0;
+    const gradeName = isFirst ? "관리자" : "일반";
+    const g = await sql`select id from grades where name = ${gradeName} limit 1`;
+    const gradeId = g.length ? g[0].id : null;
+
+    const hash = await bcrypt.hash(password, 10);
+    const rows = await sql`
+      insert into users (email, password_hash, grade_id, approved)
+      values (${email}, ${hash}, ${gradeId}, ${isFirst})
+      returning id, email`;
+    const u = rows[0];
+    const token = await signSession({ uid: Number(u.id), email: u.email });
+    setSessionCookie(token);
+    return { ok: true };
+  } catch (e: any) {
+    return { ok: false, error: "가입 처리 중 오류가 발생했습니다: " + (e?.message ?? "") };
+  }
 }
 
 export async function signIn(
   email: string,
   password: string
 ): Promise<{ ok: boolean; error?: string }> {
-  email = (email || "").trim().toLowerCase();
-  const rows = await sql`select id, email, password_hash from users where email = ${email}`;
-  if (!rows.length) return { ok: false, error: "이메일 또는 비밀번호가 올바르지 않습니다." };
-  const ok = await bcrypt.compare(password, rows[0].password_hash);
-  if (!ok) return { ok: false, error: "이메일 또는 비밀번호가 올바르지 않습니다." };
-  const token = await signSession({ uid: Number(rows[0].id), email: rows[0].email });
-  setSessionCookie(token);
-  return { ok: true };
+  try {
+    email = (email || "").trim().toLowerCase();
+    const rows = await sql`select id, email, password_hash from users where email = ${email}`;
+    if (!rows.length) return { ok: false, error: "이메일 또는 비밀번호가 올바르지 않습니다." };
+    const ok = await bcrypt.compare(password, rows[0].password_hash);
+    if (!ok) return { ok: false, error: "이메일 또는 비밀번호가 올바르지 않습니다." };
+    const token = await signSession({ uid: Number(rows[0].id), email: rows[0].email });
+    setSessionCookie(token);
+    return { ok: true };
+  } catch (e: any) {
+    return { ok: false, error: "로그인 처리 중 오류가 발생했습니다: " + (e?.message ?? "") };
+  }
 }
 
 export async function signOut() {
   cookies().delete(SESSION_COOKIE);
+}
+
+// ----------------- 등급 관리 (관리자) -----------------
+
+export async function listGrades() {
+  await requireAdmin();
+  return await sql`select * from grades order by level desc, id`;
+}
+export async function addGrade(
+  name: string, level: number, can_edit: boolean, description: string | null
+) {
+  await requireAdmin();
+  await sql`insert into grades (name, level, can_edit, description)
+            values (${name}, ${level}, ${can_edit}, ${description})
+            on conflict (name) do nothing`;
+}
+export async function updateGrade(
+  id: number, name: string, level: number, can_edit: boolean, description: string | null
+) {
+  await requireAdmin();
+  await sql`update grades set name=${name}, level=${level}, can_edit=${can_edit},
+            description=${description} where id=${id}`;
+}
+export async function deleteGrade(id: number) {
+  await requireAdmin();
+  await sql`update users set grade_id = null where grade_id = ${id}`;
+  await sql`delete from grades where id=${id}`;
+}
+
+// ----------------- 회원 관리 (관리자) -----------------
+
+export async function listUsers() {
+  await requireAdmin();
+  return await sql`
+    select u.id, u.email, u.approved, u.grade_id, u.created_at,
+           g.name as grade_name, g.level as grade_level
+    from users u left join grades g on g.id = u.grade_id
+    order by u.created_at`;
+}
+export async function listGradeOptions() {
+  await requireAdmin();
+  return await sql`select id, name, level from grades order by level desc`;
+}
+export async function setUserGrade(id: number, grade_id: number | null) {
+  await requireAdmin();
+  await sql`update users set grade_id=${grade_id} where id=${id}`;
+}
+export async function setUserApproved(id: number, approved: boolean) {
+  await requireAdmin();
+  await sql`update users set approved=${approved} where id=${id}`;
+}
+export async function deleteUser(id: number) {
+  const s = await requireAdmin();
+  if (Number(s.uid) === Number(id)) throw new Error("본인 계정은 삭제할 수 없습니다.");
+  await sql`delete from users where id=${id}`;
 }
 
 // ----------------- 마스터: 고객사 -----------------
