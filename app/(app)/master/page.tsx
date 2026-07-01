@@ -8,6 +8,9 @@ import {
   listChannels, addChannel, deleteChannel,
 } from "@/lib/actions";
 
+// 새로 추가한 항목이 맨 위에 보이도록 id 내림차순 정렬
+const byNewest = (d: any[]) => [...d].sort((a, b) => Number(b.id) - Number(a.id));
+
 type Tab = "customers" | "countries" | "products" | "channels";
 const tabs: { key: Tab; label: string }[] = [
   { key: "customers", label: "고객사" },
@@ -44,7 +47,7 @@ function Customers() {
   const [rows, setRows] = useState<any[]>([]);
   const [name, setName] = useState("");
   const [kind, setKind] = useState("b2b");
-  const load = () => listCustomers().then((d) => setRows(d as any[]));
+  const load = () => listCustomers().then((d) => setRows(byNewest(d as any[])));
   useEffect(() => { load(); }, []);
   const add = async () => { if (!name.trim()) return; await addCustomer(name.trim(), kind); setName(""); load(); };
   const del = async (id: number) => { if (confirm("삭제할까요?")) { await deleteCustomer(id); load(); } };
@@ -79,7 +82,7 @@ function Customers() {
 function Countries() {
   const [rows, setRows] = useState<any[]>([]);
   const [name, setName] = useState("");
-  const load = () => listCountries().then((d) => setRows(d as any[]));
+  const load = () => listCountries().then((d) => setRows(byNewest(d as any[])));
   useEffect(() => { load(); }, []);
   const add = async () => { if (!name.trim()) return; await addCountry(name.trim()); setName(""); load(); };
   const del = async (id: number) => { if (confirm("삭제할까요?")) { await deleteCountry(id); load(); } };
@@ -96,7 +99,7 @@ function Countries() {
 function Products() {
   const [rows, setRows] = useState<any[]>([]);
   const [erp, setErp] = useState(""); const [name, setName] = useState(""); const [unit, setUnit] = useState("");
-  const load = () => listProducts().then((d) => setRows(d as any[]));
+  const load = () => listProducts().then((d) => setRows(byNewest(d as any[])));
   useEffect(() => { load(); }, []);
   const add = async () => { if (!name.trim()) return; await addProduct(erp.trim() || null, name.trim(), unit.trim() || null); setErp(""); setName(""); setUnit(""); load(); };
   const del = async (id: number) => { if (confirm("삭제할까요?")) { await deleteProduct(id); load(); } };
@@ -120,7 +123,7 @@ function Products() {
 function Channels() {
   const [rows, setRows] = useState<any[]>([]);
   const [grp, setGrp] = useState(""); const [name, setName] = useState("");
-  const load = () => listChannels().then((d) => setRows(d as any[]));
+  const load = () => listChannels().then((d) => setRows(byNewest(d as any[])));
   useEffect(() => { load(); }, []);
   const add = async () => {
     if (!name.trim()) return;
