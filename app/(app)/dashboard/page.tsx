@@ -122,23 +122,21 @@ export default function DashboardPage() {
     return Object.values(map).sort((a, b) => a.month.localeCompare(b.month));
   }, [b2b, exp, load]);
 
+  // 거래처별 매출은 B2B 매출 데이터 기준
   const byCustomer = useMemo(() => {
     const map: Record<string, number> = {};
     b2bMonth.forEach((r) => {
       const n = r.customer_name || "(미지정)";
       map[n] = (map[n] || 0) + num(r.sales_amount);
     });
-    expMonth.forEach((r) => {
-      const n = r.customer_name || "(미지정)";
-      map[n] = (map[n] || 0) + num(r.sales_total);
-    });
     return Object.entries(map)
       .map(([name, value]) => ({ name, value }))
       .filter((d) => d.value > 0)
       .sort((a, b) => b.value - a.value)
       .slice(0, 10);
-  }, [b2bMonth, expMonth]);
+  }, [b2bMonth]);
 
+  // 수출 국가별 매출 (수출대장 데이터 기준)
   const byCountry = useMemo(() => {
     const map: Record<string, number> = {};
     expMonth.forEach((r) => {
@@ -147,7 +145,9 @@ export default function DashboardPage() {
     });
     return Object.entries(map)
       .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
+      .filter((d) => d.value > 0)
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 10);
   }, [expMonth]);
 
   const months = useMemo(() => {
@@ -235,7 +235,7 @@ export default function DashboardPage() {
 
           <div className="grid lg:grid-cols-2 gap-6">
             <div className="card" style={panelStyle}>
-              <h2 className="font-semibold mb-4 text-slate-100">거래처별 매출 TOP 10 ({month})</h2>
+              <h2 className="font-semibold mb-4 text-slate-100">B2B 거래처별 매출 TOP 10 ({month})</h2>
               {byCustomer.length === 0 ? (
                 <p className="text-sm text-slate-400">데이터가 없습니다.</p>
               ) : (
@@ -261,16 +261,20 @@ export default function DashboardPage() {
               {byCountry.length === 0 ? (
                 <p className="text-sm text-slate-400">데이터가 없습니다.</p>
               ) : (
-                <div className="divide-y divide-slate-700">
-                  {byCountry.map((c) => (
-                    <div key={c.name} className="flex items-center justify-between py-2.5">
-                      <span className="text-sm text-slate-200">{c.name}</span>
-                      <span className="text-sm font-semibold tabular-nums text-sky-300">
-                        {won(c.value)} 원
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                <ResponsiveContainer width="100%" height={320}>
+                  <BarChart data={byCountry} layout="vertical" margin={{ left: 4, right: 12 }} barCategoryGap="22%">
+                    <CartesianGrid strokeDasharray="2 6" stroke={C.grid} horizontal={false} />
+                    <XAxis type="number" tickFormatter={manTick} tick={{ fill: C.axis, fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <YAxis type="category" dataKey="name" width={92} tick={{ fill: "#cbd5e1", fontSize: 10 }} axisLine={false} tickLine={false} interval={0} />
+                    <Tooltip
+                      formatter={(v: number) => won(v) + " 원"}
+                      contentStyle={tooltipStyle}
+                      labelStyle={{ color: "#cbd5e1" }}
+                      cursor={{ fill: "rgba(255,255,255,0.06)" }}
+                    />
+                    <Bar dataKey="value" fill={C.green} radius={[0, 6, 6, 0]} maxBarSize={22} />
+                  </BarChart>
+                </ResponsiveContainer>
               )}
             </div>
           </div>
