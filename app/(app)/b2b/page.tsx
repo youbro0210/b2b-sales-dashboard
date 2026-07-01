@@ -184,9 +184,8 @@ export default function B2bPage() {
                         className="input"
                         value={r.customer_id ?? ""}
                         onChange={(e) => {
-                          const id = e.target.value ? Number(e.target.value) : null;
-                          const c = customers.find((x) => x.id === id);
-                          update(r._key, { customer_id: id, customer_name: c?.name ?? "" });
+                          const c = customers.find((x) => String(x.id) === e.target.value);
+                          update(r._key, { customer_id: c ? Number(c.id) : null, customer_name: c?.name ?? "" });
                         }}
                       >
                         <option value="">— 선택 —</option>
