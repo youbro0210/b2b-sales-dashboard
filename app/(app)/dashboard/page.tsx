@@ -31,6 +31,26 @@ const ymd = (d: any): string => {
 const monthKey = (d: any) => ymd(d).slice(0, 7);
 const num = (v: any) => Number(v ?? 0);
 
+// 다크 차트 패널 테마 (Apple Fitness 스타일 참고)
+const C = {
+  panel: "#0f172a",
+  grid: "#1e293b",
+  axis: "#94a3b8",
+  blue: "#38bdf8",
+  green: "#34d399",
+  amber: "#fbbf24",
+};
+const panelStyle = { background: C.panel, borderColor: C.panel } as const;
+const tooltipStyle = {
+  background: "#1e293b",
+  border: "none",
+  borderRadius: 8,
+  color: "#f1f5f9",
+  fontSize: 12,
+  boxShadow: "0 6px 20px rgba(0,0,0,0.4)",
+} as const;
+const axisTick = { fill: C.axis, fontSize: 11 } as const;
+
 type Any = Record<string, any>;
 
 export default function DashboardPage() {
@@ -171,74 +191,86 @@ export default function DashboardPage() {
             <Kpi title="B2B 매출이익" value={won(b2bProfit)} />
           </div>
 
-          <div className="card">
-            <h2 className="font-semibold mb-4">일자별 매출 ({month})</h2>
+          <div className="card" style={panelStyle}>
+            <h2 className="font-semibold mb-4 text-slate-100">일자별 매출 ({month})</h2>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={daily}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-                <XAxis dataKey="day" fontSize={11} />
-                <YAxis tickFormatter={manTick} width={52} fontSize={11} />
-                <Tooltip formatter={(v: number) => won(v) + " 원"} />
-                <Legend />
-                <Bar dataKey="B2B" stackId="a" fill="#3b82f6" />
-                <Bar dataKey="수출" stackId="a" fill="#10b981" />
-                <Bar dataKey="상차" stackId="a" fill="#f59e0b" />
+              <BarChart data={daily} barCategoryGap="28%" margin={{ top: 8, right: 8 }}>
+                <CartesianGrid strokeDasharray="2 6" stroke={C.grid} vertical={false} />
+                <XAxis dataKey="day" tick={axisTick} axisLine={{ stroke: C.grid }} tickLine={false} />
+                <YAxis tickFormatter={manTick} width={52} tick={axisTick} axisLine={false} tickLine={false} />
+                <Tooltip
+                  formatter={(v: number) => won(v) + " 원"}
+                  contentStyle={tooltipStyle}
+                  labelStyle={{ color: "#cbd5e1" }}
+                  cursor={{ fill: "rgba(255,255,255,0.06)" }}
+                />
+                <Legend wrapperStyle={{ color: "#cbd5e1", fontSize: 12 }} />
+                <Bar dataKey="B2B" stackId="a" fill={C.blue} maxBarSize={44} />
+                <Bar dataKey="수출" stackId="a" fill={C.green} maxBarSize={44} />
+                <Bar dataKey="상차" stackId="a" fill={C.amber} maxBarSize={44} radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
-          <div className="card">
-            <h2 className="font-semibold mb-4">월별 매출 추이 (전체)</h2>
+          <div className="card" style={panelStyle}>
+            <h2 className="font-semibold mb-4 text-slate-100">월별 매출 추이 (전체)</h2>
             <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={monthly}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-                <XAxis dataKey="month" fontSize={11} />
-                <YAxis tickFormatter={manTick} width={52} fontSize={11} />
-                <Tooltip formatter={(v: number) => won(v) + " 원"} />
-                <Legend />
-                <Line type="monotone" dataKey="B2B" stroke="#3b82f6" strokeWidth={2} />
-                <Line type="monotone" dataKey="수출" stroke="#10b981" strokeWidth={2} />
-                <Line type="monotone" dataKey="상차" stroke="#f59e0b" strokeWidth={2} />
+              <LineChart data={monthly} margin={{ top: 8, right: 8 }}>
+                <CartesianGrid strokeDasharray="2 6" stroke={C.grid} vertical={false} />
+                <XAxis dataKey="month" tick={axisTick} axisLine={{ stroke: C.grid }} tickLine={false} />
+                <YAxis tickFormatter={manTick} width={52} tick={axisTick} axisLine={false} tickLine={false} />
+                <Tooltip
+                  formatter={(v: number) => won(v) + " 원"}
+                  contentStyle={tooltipStyle}
+                  labelStyle={{ color: "#cbd5e1" }}
+                  cursor={{ stroke: "#475569" }}
+                />
+                <Legend wrapperStyle={{ color: "#cbd5e1", fontSize: 12 }} />
+                <Line type="monotone" dataKey="B2B" stroke={C.blue} strokeWidth={3} dot={false} activeDot={{ r: 5 }} />
+                <Line type="monotone" dataKey="수출" stroke={C.green} strokeWidth={3} dot={false} activeDot={{ r: 5 }} />
+                <Line type="monotone" dataKey="상차" stroke={C.amber} strokeWidth={3} dot={false} activeDot={{ r: 5 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
 
           <div className="grid lg:grid-cols-2 gap-6">
-            <div className="card">
-              <h2 className="font-semibold mb-4">거래처별 매출 TOP 10 ({month})</h2>
+            <div className="card" style={panelStyle}>
+              <h2 className="font-semibold mb-4 text-slate-100">거래처별 매출 TOP 10 ({month})</h2>
               {byCustomer.length === 0 ? (
                 <p className="text-sm text-slate-400">데이터가 없습니다.</p>
               ) : (
                 <ResponsiveContainer width="100%" height={320}>
-                  <BarChart data={byCustomer} layout="vertical" margin={{ left: 4, right: 8 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-                    <XAxis type="number" tickFormatter={manTick} fontSize={10} />
-                    <YAxis type="category" dataKey="name" width={88} fontSize={10} interval={0} />
-                    <Tooltip formatter={(v: number) => won(v) + " 원"} />
-                    <Bar dataKey="value" fill="#1e40af" />
+                  <BarChart data={byCustomer} layout="vertical" margin={{ left: 4, right: 12 }} barCategoryGap="22%">
+                    <CartesianGrid strokeDasharray="2 6" stroke={C.grid} horizontal={false} />
+                    <XAxis type="number" tickFormatter={manTick} tick={{ fill: C.axis, fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <YAxis type="category" dataKey="name" width={92} tick={{ fill: "#cbd5e1", fontSize: 10 }} axisLine={false} tickLine={false} interval={0} />
+                    <Tooltip
+                      formatter={(v: number) => won(v) + " 원"}
+                      contentStyle={tooltipStyle}
+                      labelStyle={{ color: "#cbd5e1" }}
+                      cursor={{ fill: "rgba(255,255,255,0.06)" }}
+                    />
+                    <Bar dataKey="value" fill={C.blue} radius={[0, 6, 6, 0]} maxBarSize={22} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
             </div>
 
-            <div className="card">
-              <h2 className="font-semibold mb-4">수출 국가별 매출 ({month})</h2>
+            <div className="card" style={panelStyle}>
+              <h2 className="font-semibold mb-4 text-slate-100">수출 국가별 매출 ({month})</h2>
               {byCountry.length === 0 ? (
                 <p className="text-sm text-slate-400">데이터가 없습니다.</p>
               ) : (
-                <table className="data">
-                  <thead>
-                    <tr><th>국가</th><th className="text-right">매출액</th></tr>
-                  </thead>
-                  <tbody>
-                    {byCountry.map((c) => (
-                      <tr key={c.name}>
-                        <td>{c.name}</td>
-                        <td className="text-right">{won(c.value)} 원</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="divide-y divide-slate-700">
+                  {byCountry.map((c) => (
+                    <div key={c.name} className="flex items-center justify-between py-2.5">
+                      <span className="text-sm text-slate-200">{c.name}</span>
+                      <span className="text-sm font-semibold tabular-nums text-sky-300">
+                        {won(c.value)} 원
+                      </span>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </div>
