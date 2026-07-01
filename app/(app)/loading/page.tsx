@@ -82,6 +82,9 @@ export default function LoadingPage() {
         <span className="text-sm text-slate-500 mr-2">
           합계 <b className="text-slate-800">{fmt(total)}</b> 원
         </span>
+        <button className="btn-ghost" onClick={fetchValues} disabled={loading}>
+          {loading ? "조회 중..." : "🔍 조회"}
+        </button>
         <button className="btn-primary" onClick={save} disabled={saving}>
           {saving ? "저장 중..." : "저장"}
         </button>
