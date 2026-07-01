@@ -8,6 +8,7 @@ import {
   setUserApproved,
   deleteUser,
 } from "@/lib/actions";
+import { ymd } from "@/lib/types";
 
 type Grade = { id: number; name: string; level: number };
 
@@ -111,7 +112,7 @@ export default function MembersPage() {
                     )}
                   </td>
                   <td className="text-slate-500">
-                    {String(r.created_at ?? "").slice(0, 10)}
+                    {ymd(r.created_at)}
                   </td>
                   <td className="whitespace-nowrap">
                     <button
