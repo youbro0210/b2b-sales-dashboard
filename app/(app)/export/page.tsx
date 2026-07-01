@@ -143,12 +143,17 @@ export default function ExportPage() {
           <h1 className="text-2xl font-bold">수출대장 입력</h1>
           <p className="text-sm text-slate-500">수출매출 현황 · 납기일 기준</p>
         </div>
-        <input
-          type="month"
-          className="input max-w-[160px]"
-          value={month}
-          onChange={(e) => setMonth(e.target.value)}
-        />
+        <div className="flex items-center gap-2">
+          <input
+            type="month"
+            className="input max-w-[160px]"
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+          />
+          <button className="btn-ghost whitespace-nowrap" onClick={fetchRows} disabled={loading}>
+            {loading ? "조회 중..." : "🔍 조회"}
+          </button>
+        </div>
       </div>
 
       <div className="card">
