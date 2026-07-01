@@ -37,11 +37,16 @@ function setSessionCookie(token: string) {
 
 export async function signUp(
   email: string,
-  password: string
+  password: string,
+  name?: string,
+  phone?: string
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     email = (email || "").trim().toLowerCase();
+    const nm = (name || "").trim() || null;
+    const ph = (phone || "").trim() || null;
     if (!email || !password) return { ok: false, error: "이메일과 비밀번호를 입력하세요." };
+    if (!nm) return { ok: false, error: "이름을 입력하세요." };
     if (password.length < 6) return { ok: false, error: "비밀번호는 6자 이상이어야 합니다." };
 
     const existing = await sql`select id from users where email = ${email}`;
@@ -56,8 +61,8 @@ export async function signUp(
 
     const hash = await bcrypt.hash(password, 10);
     const rows = await sql`
-      insert into users (email, password_hash, grade_id, approved)
-      values (${email}, ${hash}, ${gradeId}, ${isFirst})
+      insert into users (email, password_hash, grade_id, approved, name, phone)
+      values (${email}, ${hash}, ${gradeId}, ${isFirst}, ${nm}, ${ph})
       returning id, email`;
     const u = rows[0];
     const token = await signSession({ uid: Number(u.id), email: u.email });
@@ -122,7 +127,7 @@ export async function deleteGrade(id: number) {
 export async function listUsers() {
   await requireAdmin();
   return await sql`
-    select u.id, u.email, u.approved, u.grade_id, u.created_at,
+    select u.id, u.email, u.name, u.phone, u.approved, u.grade_id, u.created_at,
            g.name as grade_name, g.level as grade_level
     from users u left join grades g on g.id = u.grade_id
     order by u.created_at`;
@@ -334,6 +339,109 @@ export async function upsertExport(r: ExportInput) {
 export async function deleteExport(id: number) {
   await requireUser();
   await sql`delete from export_sales where id = ${id}`;
+}
+
+// ----------------- 엑셀 대량 업로드 -----------------
+
+export async function bulkSaveB2b(
+  rows: {
+    sale_date: string;
+    customer_name: string;
+    mfg_cost: number;
+    sales_amount: number;
+    profit_amount: number;
+    note: string | null;
+  }[]
+): Promise<{ ok: boolean; count: number; error?: string }> {
+  try {
+    await requireUser();
+    const custs = await sql`select id, name from customers`;
+    const map = new Map(custs.map((c: any) => [String(c.name).trim(), c.id]));
+    let n = 0;
+    for (const r of rows) {
+      if (!r.sale_date) continue;
+      const cid = map.get(String(r.customer_name || "").trim()) ?? null;
+      await sql`insert into b2b_sales
+        (sale_date, customer_id, customer_name, mfg_cost, sales_amount, profit_amount, note)
+        values (${r.sale_date}, ${cid}, ${r.customer_name || null}, ${r.mfg_cost || 0},
+                ${r.sales_amount || 0}, ${r.profit_amount || 0}, ${r.note || null})`;
+      n++;
+    }
+    return { ok: true, count: n };
+  } catch (e: any) {
+    return { ok: false, count: 0, error: e?.message ?? "업로드 실패" };
+  }
+}
+
+export async function bulkSaveLoading(
+  rows: { load_date: string; channel_name: string; supply_amount: number }[]
+): Promise<{ ok: boolean; count: number; error?: string }> {
+  try {
+    await requireUser();
+    const chans = await sql`select id, name from channels`;
+    const map = new Map(chans.map((c: any) => [String(c.name).trim(), c.id]));
+    let n = 0;
+    for (const r of rows) {
+      if (!r.load_date || !r.supply_amount) continue;
+      const cid = map.get(String(r.channel_name || "").trim()) ?? null;
+      await sql`insert into loading_amounts (load_date, channel_id, channel_name, supply_amount)
+                values (${r.load_date}, ${cid}, ${r.channel_name || null}, ${r.supply_amount || 0})`;
+      n++;
+    }
+    return { ok: true, count: n };
+  } catch (e: any) {
+    return { ok: false, count: 0, error: e?.message ?? "업로드 실패" };
+  }
+}
+
+export async function bulkSaveExport(
+  rows: {
+    delivery_date: string;
+    supply_type: string | null;
+    customer_name: string | null;
+    country_name: string | null;
+    erp_code: string | null;
+    product_name: string | null;
+    unit: string | null;
+    sales_per_unit: number;
+    qty_unit: number;
+    qty_box: number;
+    sales_total: number;
+    mfg_cost_total: number;
+    logistics_cost: number;
+    exchange_rate: number;
+    category: string | null;
+    gov_support: string | null;
+  }[]
+): Promise<{ ok: boolean; count: number; error?: string }> {
+  try {
+    await requireUser();
+    const [custs, countries] = await Promise.all([
+      sql`select id, name from customers`,
+      sql`select id, name from countries`,
+    ]);
+    const cmap = new Map(custs.map((c: any) => [String(c.name).trim(), c.id]));
+    const nmap = new Map(countries.map((c: any) => [String(c.name).trim(), c.id]));
+    let n = 0;
+    for (const r of rows) {
+      if (!r.delivery_date) continue;
+      const cid = cmap.get(String(r.customer_name || "").trim()) ?? null;
+      const coid = nmap.get(String(r.country_name || "").trim()) ?? null;
+      await sql`insert into export_sales
+        (supply_type, customer_id, customer_name, country_id, country_name, delivery_date,
+         erp_code, product_name, unit, sales_per_unit, qty_unit, qty_box, sales_total,
+         mfg_cost_total, logistics_cost, exchange_rate, category, gov_support)
+        values (${r.supply_type || null}, ${cid}, ${r.customer_name || null}, ${coid},
+         ${r.country_name || null}, ${r.delivery_date}, ${r.erp_code || null}, ${r.product_name || null},
+         ${r.unit || null}, ${r.sales_per_unit || 0}, ${r.qty_unit || 0}, ${r.qty_box || 0},
+         ${r.sales_total || 0}, ${r.mfg_cost_total || 0}, ${r.logistics_cost || 0},
+         ${r.exchange_rate || 0}, ${r.category || null}, ${r.gov_support || null})`;
+      n++;
+    }
+    return { ok: true, count: n };
+  } catch (e: any) {
+    return { ok: false, count: 0, error: e?.message ?? "업로드 실패" };
+  }
 }
 
 // ----------------- 대시보드 -----------------
