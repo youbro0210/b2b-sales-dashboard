@@ -223,10 +223,10 @@ export default function ExportPage() {
           <Field label="ERP CODE"><input className="input" value={form.erp_code} onChange={(e) => set({ erp_code: e.target.value })} /></Field>
           <Field label="단위"><input className="input" value={form.unit} onChange={(e) => set({ unit: e.target.value })} /></Field>
           <Field label="대분류"><input className="input" value={form.category} onChange={(e) => set({ category: e.target.value })} /></Field>
-          <Field label="매출액/단위"><Num value={form.sales_per_unit} onChange={(v) => set({ sales_per_unit: v })} /></Field>
-          <Field label="수량(단위)"><Num value={form.qty_unit} onChange={(v) => set({ qty_unit: v })} /></Field>
+          <Field label="매출액/단위"><Num value={form.sales_per_unit} onChange={(v) => set({ sales_per_unit: v, sales_total: v * num(form.qty_unit) })} /></Field>
+          <Field label="수량(단위)"><Num value={form.qty_unit} onChange={(v) => set({ qty_unit: v, sales_total: num(form.sales_per_unit) * v })} /></Field>
           <Field label="수량(박스)"><Num value={form.qty_box} onChange={(v) => set({ qty_box: v })} /></Field>
-          <Field label="매출 계"><Num value={form.sales_total} onChange={(v) => set({ sales_total: v })} /></Field>
+          <Field label="매출 계 (자동=매출액×수량, 수정가능)"><Num value={form.sales_total} onChange={(v) => set({ sales_total: v })} /></Field>
           <Field label="제조원가 계"><Num value={form.mfg_cost_total} onChange={(v) => set({ mfg_cost_total: v })} /></Field>
           <Field label="물류비"><Num value={form.logistics_cost} onChange={(v) => set({ logistics_cost: v })} /></Field>
           <Field label="환율"><Num value={form.exchange_rate} onChange={(v) => set({ exchange_rate: v })} /></Field>
