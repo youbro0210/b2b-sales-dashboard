@@ -17,7 +17,16 @@ import { dashboardData } from "@/lib/actions";
 import { fmt } from "@/lib/types";
 
 const won = (v: number) => fmt(Math.round(v));
-const monthKey = (d: string) => (d ? String(d).slice(0, 7) : "");
+// 날짜를 Date 객체/문자열 어느 쪽이든 "YYYY-MM-DD"로 정규화 (date 컬럼은 시간대 없음 → UTC 사용)
+const ymd = (d: any): string => {
+  if (!d) return "";
+  if (d instanceof Date) return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+  const s = String(d);
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const dt = new Date(s);
+  return isNaN(dt.getTime()) ? "" : dt.toISOString().slice(0, 10);
+};
+const monthKey = (d: any) => ymd(d).slice(0, 7);
 const num = (v: any) => Number(v ?? 0);
 
 type Any = Record<string, any>;
@@ -64,7 +73,7 @@ export default function DashboardPage() {
   const daily = useMemo(() => {
     const map: Record<string, { date: string; B2B: number; 수출: number; 상차: number }> = {};
     const add = (date: string, key: "B2B" | "수출" | "상차", v: number) => {
-      const d = String(date).slice(0, 10);
+      const d = ymd(date);
       if (!d) return;
       map[d] = map[d] || { date: d, B2B: 0, 수출: 0, 상차: 0 };
       map[d][key] += v;
