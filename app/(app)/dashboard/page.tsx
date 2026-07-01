@@ -33,8 +33,8 @@ const num = (v: any) => Number(v ?? 0);
 
 // 다크 차트 패널 테마 (Apple Fitness 스타일 참고)
 const C = {
-  panel: "#0f172a",
-  grid: "#1e293b",
+  panel: "#0A2540",
+  grid: "#1e3a52",
   axis: "#94a3b8",
   blue: "#38bdf8",
   green: "#34d399",
@@ -284,9 +284,13 @@ function Kpi({ title, value, accent }: { title: string; value: string; accent?: 
   return (
     <div
       className="card !p-4 sm:!p-5"
-      style={accent ? { background: "#1e40af", borderColor: "#1e40af", color: "#ffffff" } : undefined}
+      style={
+        accent
+          ? { background: "linear-gradient(135deg,#0184CA 0%,#0A2540 100%)", borderColor: "#0A2540", color: "#ffffff" }
+          : undefined
+      }
     >
-      <div className="text-[11px] sm:text-xs leading-tight" style={{ color: accent ? "#dbeafe" : "#64748b" }}>{title}</div>
+      <div className="text-[11px] sm:text-xs leading-tight" style={{ color: accent ? "#e0f2fe" : "#64748b" }}>{title}</div>
       <div
         className="text-base sm:text-xl font-bold mt-1.5 sm:mt-2 leading-tight tabular-nums break-keep"
         style={{ color: accent ? "#ffffff" : undefined }}
