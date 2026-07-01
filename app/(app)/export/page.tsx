@@ -193,8 +193,8 @@ export default function ExportPage() {
           <Field label="고객사명">
             <select className="input" value={form.customer_id ?? ""}
               onChange={(e) => {
-                const id = e.target.value ? Number(e.target.value) : null;
-                set({ customer_id: id, customer_name: customers.find((c) => c.id === id)?.name ?? "" });
+                const c = customers.find((x) => String(x.id) === e.target.value);
+                set({ customer_id: c ? Number(c.id) : null, customer_name: c?.name ?? "" });
               }}>
               <option value="">— 선택 —</option>
               {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -203,8 +203,8 @@ export default function ExportPage() {
           <Field label="수출국가">
             <select className="input" value={form.country_id ?? ""}
               onChange={(e) => {
-                const id = e.target.value ? Number(e.target.value) : null;
-                set({ country_id: id, country_name: countries.find((c) => c.id === id)?.name ?? "" });
+                const c = countries.find((x) => String(x.id) === e.target.value);
+                set({ country_id: c ? Number(c.id) : null, country_name: c?.name ?? "" });
               }}>
               <option value="">— 선택 —</option>
               {countries.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
