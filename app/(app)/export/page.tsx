@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { fmt } from "@/lib/types";
+import { fmt, ymd } from "@/lib/types";
 import ExcelBox from "@/components/ExcelBox";
 import NumberInput from "@/components/NumberInput";
 import {
@@ -110,7 +110,7 @@ export default function ExportPage() {
       customer_name: r.customer_name ?? "",
       country_id: r.country_id,
       country_name: r.country_name ?? "",
-      delivery_date: String(r.delivery_date ?? new Date().toISOString()).slice(0, 10),
+      delivery_date: ymd(r.delivery_date) || new Date().toISOString().slice(0, 10),
       erp_code: r.erp_code ?? "",
       product_name: r.product_name ?? "",
       unit: r.unit ?? "",
@@ -166,7 +166,7 @@ export default function ExportPage() {
              "매출액/단위", "수량(단위)", "수량(박스)", "매출 계", "제조원가 계", "물류비",
              "환율", "대분류", "정부지원사업"],
             ...rows.map((r) => [
-              String(r.delivery_date ?? "").slice(0, 10),
+              ymd(r.delivery_date),
               r.supply_type, r.customer_name, r.country_name, r.erp_code,
               r.product_name, r.unit, num(r.sales_per_unit), num(r.qty_unit),
               num(r.qty_box), num(r.sales_total), num(r.mfg_cost_total),
@@ -261,7 +261,7 @@ export default function ExportPage() {
               )}
               {rows.map((r) => (
                 <tr key={r.id} className="cursor-pointer" onClick={() => edit(r)}>
-                  <td>{String(r.delivery_date).slice(0, 10)}</td>
+                  <td>{ymd(r.delivery_date)}</td>
                   <td>{r.supply_type}</td>
                   <td>{r.customer_name}</td>
                   <td>{r.country_name}</td>
