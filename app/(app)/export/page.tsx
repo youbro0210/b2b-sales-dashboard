@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { fmt } from "@/lib/types";
 import ExcelBox from "@/components/ExcelBox";
+import NumberInput from "@/components/NumberInput";
 import {
   listCustomers,
   listCountries,
@@ -273,8 +274,5 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 function Num({ value, onChange }: { value: number; onChange: (v: number) => void }) {
-  return (
-    <input type="number" className="input text-right" value={value}
-      onChange={(e) => onChange(Number(e.target.value))} />
-  );
+  return <NumberInput value={value} onChange={onChange} />;
 }
