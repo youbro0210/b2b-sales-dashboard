@@ -152,7 +152,23 @@ export default function ExportPage() {
       </div>
 
       <div className="card">
-        <ExcelBox kind="export" onDone={fetchRows} />
+        <ExcelBox
+          kind="export"
+          onDone={fetchRows}
+          exportName={`수출대장_${month}.xlsx`}
+          getExport={() => [
+            ["납기일", "공급구분", "고객사명", "수출국가", "ERP CODE", "품명", "단위",
+             "매출액/단위", "수량(단위)", "수량(박스)", "매출 계", "제조원가 계", "물류비",
+             "환율", "대분류", "정부지원사업"],
+            ...rows.map((r) => [
+              String(r.delivery_date ?? "").slice(0, 10),
+              r.supply_type, r.customer_name, r.country_name, r.erp_code,
+              r.product_name, r.unit, num(r.sales_per_unit), num(r.qty_unit),
+              num(r.qty_box), num(r.sales_total), num(r.mfg_cost_total),
+              num(r.logistics_cost), num(r.exchange_rate), r.category, r.gov_support,
+            ]),
+          ]}
+        />
       </div>
 
       <div className="card">
