@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { fmt } from "@/lib/types";
+import ExcelBox from "@/components/ExcelBox";
 import {
   listCustomers,
   listCountries,
@@ -147,6 +148,10 @@ export default function ExportPage() {
           value={month}
           onChange={(e) => setMonth(e.target.value)}
         />
+      </div>
+
+      <div className="card">
+        <ExcelBox kind="export" onDone={fetchRows} />
       </div>
 
       <div className="card">
