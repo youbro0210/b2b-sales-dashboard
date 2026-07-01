@@ -27,13 +27,26 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-bold text-center mb-1">매출 관리 시스템</h1>
-        <p className="text-sm text-slate-500 text-center mb-6">
-          로그인하여 대시보드에 접속하세요
-        </p>
-        <form onSubmit={handleLogin} className="card space-y-4">
+    <div
+      className="min-h-screen flex items-center justify-center px-4 py-10 relative overflow-hidden"
+      style={{ background: "linear-gradient(160deg,#0A2540 0%,#0E4C7A 55%,#0184CA 100%)" }}
+    >
+      {/* 파도 느낌의 장식 */}
+      <div
+        className="pointer-events-none absolute -bottom-24 -right-24 w-96 h-96 rounded-full opacity-20"
+        style={{ background: "radial-gradient(circle,#7dd3fc 0%,transparent 70%)" }}
+      />
+      <div className="w-full max-w-sm relative">
+        <div className="text-center mb-6">
+          <div className="text-3xl font-extrabold text-white tracking-wide flex items-center justify-center gap-2">
+            <span>🌊</span> 은하수산
+          </div>
+          <p className="text-sky-100/80 text-sm mt-2 tracking-wide">
+            매출관리 시스템 · Since 1970
+          </p>
+        </div>
+        <form onSubmit={handleLogin} className="bg-white rounded-2xl shadow-2xl p-6 space-y-4">
+          <h2 className="text-lg font-bold text-slate-800 text-center mb-1">로그인</h2>
           <div>
             <label className="label">이메일</label>
             <input
@@ -59,11 +72,14 @@ export default function LoginPage() {
             {loading ? "로그인 중..." : "로그인"}
           </button>
         </form>
-        <p className="text-sm text-center mt-4 text-slate-600">
+        <p className="text-sm text-center mt-5 text-sky-100/90">
           계정이 없으신가요?{" "}
-          <Link href="/signup" className="text-brand font-medium">
+          <Link href="/signup" className="text-white font-semibold underline underline-offset-2">
             회원가입
           </Link>
+        </p>
+        <p className="text-center text-[11px] text-sky-200/60 mt-8">
+          © eunha Fisheries Co., Ltd.
         </p>
       </div>
     </div>
