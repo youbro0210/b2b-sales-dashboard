@@ -9,6 +9,8 @@ import { listChannels, listLoadingByDate, saveLoading } from "@/lib/actions";
 
 type Channel = { id: number; group_name: string | null; name: string; sort_order: number };
 const num = (v: any) => Number(v ?? 0);
+// 이름이 "합계"로 끝나는 채널은 하위 채널 자동합산(읽기 전용) 행으로 취급
+const isSum = (name: string) => /합계\s*$/.test((name || "").trim());
 
 export default function LoadingPage() {
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -38,22 +40,18 @@ export default function LoadingPage() {
 
   const save = async () => {
     setSaving(true);
+    // 합계 채널은 저장하지 않음(하위 채널로 자동 계산 → 대시보드 중복 합산 방지)
     await saveLoading(
       date,
       channels.map((c) => ({
         channel_id: c.id,
         channel_name: c.name,
-        supply_amount: num(values[c.id]),
+        supply_amount: isSum(c.name) ? 0 : num(values[c.id]),
       }))
     );
     setSaving(false);
     fetchValues();
   };
-
-  const total = useMemo(
-    () => channels.reduce((s, c) => s + num(values[c.id]), 0),
-    [channels, values]
-  );
 
   const grouped = useMemo(() => {
     const g: { group: string; items: Channel[] }[] = [];
@@ -71,11 +69,32 @@ export default function LoadingPage() {
     return g;
   }, [channels]);
 
+  // 합계 채널 값 = 같은 그룹에서 이름 접두사가 같은 (합계가 아닌) 하위 채널들의 합
+  const memberSum = (sumName: string, items: Channel[]) => {
+    const prefix = sumName.replace(/합계\s*$/, "").trim();
+    return items
+      .filter((c) => !isSum(c.name) && c.name.startsWith(prefix))
+      .reduce((s, c) => s + num(values[c.id]), 0);
+  };
+  const cellValue = (c: Channel, items: Channel[]) =>
+    isSum(c.name) ? memberSum(c.name, items) : num(values[c.id]);
+
+  // 총 합계에서는 합계 행 제외(중복 방지)
+  const total = useMemo(
+    () =>
+      channels
+        .filter((c) => !isSum(c.name))
+        .reduce((s, c) => s + num(values[c.id]), 0),
+    [channels, values]
+  );
+
   return (
     <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-bold">상차금액 입력</h1>
-        <p className="text-sm text-slate-500">상차일 기준 · 채널별 공급가액</p>
+        <p className="text-sm text-slate-500">
+          상차일 기준 · 채널별 공급가액 <span className="text-slate-400">(합계 행은 자동 계산되며 총 합계에서 제외됩니다)</span>
+        </p>
       </div>
 
       <DateBar date={date} setDate={setDate}>
@@ -98,7 +117,7 @@ export default function LoadingPage() {
           getExport={() => [
             ["일자", "구분", "채널명", "공급가액"],
             ...grouped.flatMap((g) =>
-              g.items.map((c) => [date, g.group, c.name, num(values[c.id])])
+              g.items.map((c) => [date, g.group, c.name, cellValue(c, g.items)])
             ),
           ]}
         />
@@ -108,35 +127,48 @@ export default function LoadingPage() {
         {loading ? (
           <p className="text-slate-500">불러오는 중...</p>
         ) : (
-          <table className="data">
+          <table className="data celled">
             <thead>
               <tr>
-                <th>구분</th>
+                <th style={{ minWidth: 90 }}>구분</th>
                 <th style={{ minWidth: 240 }}>채널명</th>
                 <th className="text-right" style={{ minWidth: 160 }}>공급가액</th>
               </tr>
             </thead>
             <tbody>
               {grouped.map((g) =>
-                g.items.map((c, i) => (
-                  <tr key={c.id}>
-                    <td className="text-slate-500">{i === 0 ? g.group : ""}</td>
-                    <td>{c.name}</td>
-                    <td>
-                      <NumberInput
-                        value={values[c.id] ?? 0}
-                        onChange={(val) =>
-                          setValues((v) => ({ ...v, [c.id]: val }))
-                        }
-                      />
-                    </td>
-                  </tr>
-                ))
+                g.items.map((c, i) => {
+                  const sum = isSum(c.name);
+                  return (
+                    <tr key={c.id} className={sum ? "bg-blue-50" : undefined}>
+                      <td className="text-slate-500 align-middle">
+                        {i === 0 ? g.group : ""}
+                      </td>
+                      <td className={sum ? "font-semibold text-slate-700" : ""}>
+                        {c.name}
+                      </td>
+                      <td>
+                        {sum ? (
+                          <div className="text-right pr-2 font-semibold tabular-nums text-blue-700">
+                            {fmt(memberSum(c.name, g.items))}
+                          </div>
+                        ) : (
+                          <NumberInput
+                            value={values[c.id] ?? 0}
+                            onChange={(val) =>
+                              setValues((v) => ({ ...v, [c.id]: val }))
+                            }
+                          />
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
             <tfoot>
-              <tr className="font-semibold bg-slate-50">
-                <td colSpan={2}>총 합계</td>
+              <tr className="font-semibold bg-slate-100">
+                <td colSpan={2}>총 합계 (합계 행 제외)</td>
                 <td className="text-right">{fmt(total)} 원</td>
               </tr>
             </tfoot>
