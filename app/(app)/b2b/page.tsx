@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import DateBar from "@/components/DateBar";
 import ExcelBox from "@/components/ExcelBox";
+import NumberInput from "@/components/NumberInput";
 import { fmt } from "@/lib/types";
 import {
   listCustomers,
@@ -175,9 +176,9 @@ export default function B2bPage() {
                         ))}
                       </select>
                     </td>
-                    <td><NumInput value={r.mfg_cost} onChange={(v) => update(r._key, { mfg_cost: v })} /></td>
-                    <td><NumInput value={r.sales_amount} onChange={(v) => update(r._key, { sales_amount: v })} /></td>
-                    <td><NumInput value={r.profit_amount} onChange={(v) => update(r._key, { profit_amount: v })} /></td>
+                    <td><NumberInput value={r.mfg_cost} onChange={(v) => update(r._key, { mfg_cost: v })} /></td>
+                    <td><NumberInput value={r.sales_amount} onChange={(v) => update(r._key, { sales_amount: v })} /></td>
+                    <td><NumberInput value={r.profit_amount} onChange={(v) => update(r._key, { profit_amount: v })} /></td>
                     <td className="text-right text-slate-500">{rr}%</td>
                     <td>
                       <input
@@ -209,16 +210,5 @@ export default function B2bPage() {
         )}
       </div>
     </div>
-  );
-}
-
-function NumInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
-  return (
-    <input
-      type="number"
-      className="input text-right"
-      value={value}
-      onChange={(e) => onChange(Number(e.target.value))}
-    />
   );
 }
