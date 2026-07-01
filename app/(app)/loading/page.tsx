@@ -88,7 +88,17 @@ export default function LoadingPage() {
       </DateBar>
 
       <div className="card">
-        <ExcelBox kind="loading" onDone={fetchValues} />
+        <ExcelBox
+          kind="loading"
+          onDone={fetchValues}
+          exportName={`상차금액_${date}.xlsx`}
+          getExport={() => [
+            ["일자", "구분", "채널명", "공급가액"],
+            ...grouped.flatMap((g) =>
+              g.items.map((c) => [date, g.group, c.name, num(values[c.id])])
+            ),
+          ]}
+        />
       </div>
 
       <div className="card overflow-x-auto">
