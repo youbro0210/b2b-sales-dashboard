@@ -67,6 +67,8 @@ export default function MembersPage() {
           <table className="data">
             <thead>
               <tr>
+                <th>이름</th>
+                <th>전화번호</th>
                 <th>이메일</th>
                 <th>등급</th>
                 <th>승인상태</th>
@@ -77,13 +79,15 @@ export default function MembersPage() {
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="text-center text-slate-400 py-6">
+                  <td colSpan={7} className="text-center text-slate-400 py-6">
                     회원이 없습니다.
                   </td>
                 </tr>
               )}
               {rows.map((r) => (
                 <tr key={r.id}>
+                  <td>{r.name ?? "-"}</td>
+                  <td className="whitespace-nowrap">{r.phone ?? "-"}</td>
                   <td>{r.email}</td>
                   <td>
                     <select
@@ -130,7 +134,7 @@ export default function MembersPage() {
         )}
       </div>
       <p className="text-xs text-slate-400">
-        ※ 첫 가입자는 자동으로 관리자(승인됨)로 설정됩니다. 이후 가입자는 “대기” 상태이면 관리자가 승인해야 데이터에 접근할 수 있습니다.
+        ※ 첫 가입자는 자동으로 관리자(승인됨)로 설정됩니다. 이후 가입자는 “대기” 상태이며 관리자가 승인해야 데이터에 접근할 수 있습니다.
       </p>
     </div>
   );
