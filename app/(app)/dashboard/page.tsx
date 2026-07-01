@@ -17,6 +17,8 @@ import { dashboardData } from "@/lib/actions";
 import { fmt } from "@/lib/types";
 
 const won = (v: number) => fmt(Math.round(v));
+// 차트 축(만 단위)도 천단위 구분자 표시
+const manTick = (v: number) => `${Math.round(v / 10000).toLocaleString("ko-KR")}만`;
 // 날짜를 Date 객체/문자열 어느 쪽이든 "YYYY-MM-DD"로 정규화 (date 컬럼은 시간대 없음 → UTC 사용)
 const ymd = (d: any): string => {
   if (!d) return "";
@@ -161,7 +163,7 @@ export default function DashboardPage() {
         <div className="text-slate-500">불러오는 중...</div>
       ) : (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
             <Kpi title="총 매출 (선택 월)" value={won(totalSales)} accent />
             <Kpi title="B2B 매출" value={won(b2bSales)} />
             <Kpi title="수출 매출" value={won(expSales)} />
@@ -174,8 +176,8 @@ export default function DashboardPage() {
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={daily}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-                <XAxis dataKey="day" fontSize={12} />
-                <YAxis tickFormatter={(v) => `${Math.round(v / 10000)}만`} fontSize={12} />
+                <XAxis dataKey="day" fontSize={11} />
+                <YAxis tickFormatter={manTick} width={52} fontSize={11} />
                 <Tooltip formatter={(v: number) => won(v) + " 원"} />
                 <Legend />
                 <Bar dataKey="B2B" stackId="a" fill="#3b82f6" />
@@ -190,8 +192,8 @@ export default function DashboardPage() {
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={monthly}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-                <XAxis dataKey="month" fontSize={12} />
-                <YAxis tickFormatter={(v) => `${Math.round(v / 10000)}만`} fontSize={12} />
+                <XAxis dataKey="month" fontSize={11} />
+                <YAxis tickFormatter={manTick} width={52} fontSize={11} />
                 <Tooltip formatter={(v: number) => won(v) + " 원"} />
                 <Legend />
                 <Line type="monotone" dataKey="B2B" stroke="#3b82f6" strokeWidth={2} />
@@ -208,10 +210,10 @@ export default function DashboardPage() {
                 <p className="text-sm text-slate-400">데이터가 없습니다.</p>
               ) : (
                 <ResponsiveContainer width="100%" height={320}>
-                  <BarChart data={byCustomer} layout="vertical" margin={{ left: 40 }}>
+                  <BarChart data={byCustomer} layout="vertical" margin={{ left: 4, right: 8 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-                    <XAxis type="number" tickFormatter={(v) => `${Math.round(v / 10000)}만`} fontSize={11} />
-                    <YAxis type="category" dataKey="name" width={120} fontSize={11} />
+                    <XAxis type="number" tickFormatter={manTick} fontSize={10} />
+                    <YAxis type="category" dataKey="name" width={88} fontSize={10} interval={0} />
                     <Tooltip formatter={(v: number) => won(v) + " 원"} />
                     <Bar dataKey="value" fill="#1e40af" />
                   </BarChart>
@@ -249,12 +251,17 @@ export default function DashboardPage() {
 function Kpi({ title, value, accent }: { title: string; value: string; accent?: boolean }) {
   return (
     <div
-      className="card"
+      className="card !p-4 sm:!p-5"
       style={accent ? { background: "#1e40af", borderColor: "#1e40af", color: "#ffffff" } : undefined}
     >
-      <div className="text-xs" style={{ color: accent ? "#dbeafe" : "#64748b" }}>{title}</div>
-      <div className="text-xl font-bold mt-2" style={{ color: accent ? "#ffffff" : undefined }}>{value}</div>
-      <div className="text-xs mt-1" style={{ color: accent ? "#dbeafe" : "#94a3b8" }}>원</div>
+      <div className="text-[11px] sm:text-xs leading-tight" style={{ color: accent ? "#dbeafe" : "#64748b" }}>{title}</div>
+      <div
+        className="text-base sm:text-xl font-bold mt-1.5 sm:mt-2 leading-tight tabular-nums break-keep"
+        style={{ color: accent ? "#ffffff" : undefined }}
+      >
+        {value}
+      </div>
+      <div className="text-[11px] sm:text-xs mt-0.5 sm:mt-1" style={{ color: accent ? "#dbeafe" : "#94a3b8" }}>원</div>
     </div>
   );
 }
