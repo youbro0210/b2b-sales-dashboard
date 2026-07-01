@@ -29,13 +29,25 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-bold text-center mb-1">회원가입</h1>
-        <p className="text-sm text-slate-500 text-center mb-6">
-          정보를 입력해 계정을 만드세요
-        </p>
-        <form onSubmit={handleSignup} className="card space-y-4">
+    <div
+      className="min-h-screen flex items-center justify-center px-4 py-10 relative overflow-hidden"
+      style={{ background: "linear-gradient(160deg,#0A2540 0%,#0E4C7A 55%,#0184CA 100%)" }}
+    >
+      <div
+        className="pointer-events-none absolute -bottom-24 -right-24 w-96 h-96 rounded-full opacity-20"
+        style={{ background: "radial-gradient(circle,#7dd3fc 0%,transparent 70%)" }}
+      />
+      <div className="w-full max-w-sm relative">
+        <div className="text-center mb-6">
+          <div className="text-3xl font-extrabold text-white tracking-wide flex items-center justify-center gap-2">
+            <span>🌊</span> 은하수산
+          </div>
+          <p className="text-sky-100/80 text-sm mt-2 tracking-wide">
+            매출관리 시스템 · Since 1970
+          </p>
+        </div>
+        <form onSubmit={handleSignup} className="bg-white rounded-2xl shadow-2xl p-6 space-y-4">
+          <h2 className="text-lg font-bold text-slate-800 text-center mb-1">회원가입</h2>
           <div>
             <label className="label">이름</label>
             <input
@@ -80,11 +92,14 @@ export default function SignupPage() {
             {loading ? "가입 중..." : "회원가입"}
           </button>
         </form>
-        <p className="text-sm text-center mt-4 text-slate-600">
+        <p className="text-sm text-center mt-5 text-sky-100/90">
           이미 계정이 있으신가요?{" "}
-          <Link href="/login" className="text-brand font-medium">
+          <Link href="/login" className="text-white font-semibold underline underline-offset-2">
             로그인
           </Link>
+        </p>
+        <p className="text-center text-[11px] text-sky-200/60 mt-8">
+          © eunha Fisheries Co., Ltd.
         </p>
       </div>
     </div>
