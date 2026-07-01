@@ -127,7 +127,23 @@ export default function B2bPage() {
       </DateBar>
 
       <div className="card">
-        <ExcelBox kind="b2b" onDone={fetchRows} />
+        <ExcelBox
+          kind="b2b"
+          onDone={fetchRows}
+          exportName={`B2B매출_${date}.xlsx`}
+          getExport={() => [
+            ["일자", "고객사명", "제조원가", "매출액", "매출이익액", "이익율(%)", "비고"],
+            ...rows.map((r) => [
+              date,
+              r.customer_name,
+              num(r.mfg_cost),
+              num(r.sales_amount),
+              num(r.profit_amount),
+              num(r.sales_amount) ? Number(((num(r.profit_amount) / num(r.sales_amount)) * 100).toFixed(1)) : 0,
+              r.note,
+            ]),
+          ]}
+        />
       </div>
 
       <div className="card overflow-x-auto">
