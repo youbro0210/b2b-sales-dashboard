@@ -194,7 +194,7 @@ export default function DashboardPage() {
 
           <div className="grid lg:grid-cols-2 gap-6">
             <div className="card">
-              <h2 className="font-semibold mb-4">거랜첸별 매출 TOP 10 ({month})</h2>
+              <h2 className="font-semibold mb-4">거래처별 매출 TOP 10 ({month})</h2>
               {byCustomer.length === 0 ? (
                 <p className="text-sm text-slate-400">데이터가 없습니다.</p>
               ) : (
@@ -239,10 +239,13 @@ export default function DashboardPage() {
 
 function Kpi({ title, value, accent }: { title: string; value: string; accent?: boolean }) {
   return (
-    <div className={`card ${accent ? "bg-brand text-white border-brand" : ""}`}>
-      <div className={`text-xs ${accent ? "text-blue-100" : "text-slate-500"}`}>{title}</div>
-      <div className="text-xl font-bold mt-2">{value}</div>
-      <div className={`text-xs mt-1 ${accent ? "text-blue-100" : "text-slate-400"}`}>원</div>
+    <div
+      className="card"
+      style={accent ? { background: "#1e40af", borderColor: "#1e40af", color: "#ffffff" } : undefined}
+    >
+      <div className="text-xs" style={{ color: accent ? "#dbeafe" : "#64748b" }}>{title}</div>
+      <div className="text-xl font-bold mt-2" style={{ color: accent ? "#ffffff" : undefined }}>{value}</div>
+      <div className="text-xs mt-1" style={{ color: accent ? "#dbeafe" : "#94a3b8" }}>원</div>
     </div>
   );
 }
