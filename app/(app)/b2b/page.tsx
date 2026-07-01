@@ -120,6 +120,9 @@ export default function B2bPage() {
       </div>
 
       <DateBar date={date} setDate={setDate}>
+        <button className="btn-ghost" onClick={fetchRows} disabled={loading}>
+          {loading ? "조회 중..." : "🔍 조회"}
+        </button>
         <button className="btn-ghost" onClick={addRow}>+ 행 추가</button>
         <button className="btn-primary" onClick={save} disabled={saving}>
           {saving ? "저장 중..." : "저장"}
