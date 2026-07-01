@@ -54,9 +54,13 @@ function toDate(v: any): string {
 export default function ExcelBox({
   kind,
   onDone,
+  getExport,
+  exportName,
 }: {
   kind: Kind;
   onDone?: () => void;
+  getExport?: () => any[][];
+  exportName?: string;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -68,6 +72,19 @@ export default function ExcelBox({
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "양식");
     XLSX.writeFile(wb, t.file);
+  };
+
+  const downloadData = () => {
+    if (!getExport) return;
+    const aoa = getExport();
+    if (!aoa || aoa.length <= 1) {
+      setMsg("다운로드할 데이터가 없습니다.");
+      return;
+    }
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "데이터");
+    XLSX.writeFile(wb, exportName || TEMPLATES[kind].file.replace("_업로드양식", "_데이터"));
   };
 
   const onPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -152,6 +169,11 @@ export default function ExcelBox({
       >
         {busy ? "업로드 중..." : "⬆ 엑셀 업로드"}
       </button>
+      {getExport && (
+        <button className="btn-ghost" onClick={downloadData}>
+          ⬇ 데이터 다운로드
+        </button>
+      )}
       <input
         ref={fileRef}
         type="file"
