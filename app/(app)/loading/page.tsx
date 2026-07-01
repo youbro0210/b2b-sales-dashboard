@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import DateBar from "@/components/DateBar";
+import ExcelBox from "@/components/ExcelBox";
 import { fmt } from "@/lib/types";
 import { listChannels, listLoadingByDate, saveLoading } from "@/lib/actions";
 
@@ -84,6 +85,10 @@ export default function LoadingPage() {
           {saving ? "저장 중..." : "저장"}
         </button>
       </DateBar>
+
+      <div className="card">
+        <ExcelBox kind="loading" onDone={fetchValues} />
+      </div>
 
       <div className="card overflow-x-auto">
         {loading ? (
