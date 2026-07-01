@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import DateBar from "@/components/DateBar";
+import ExcelBox from "@/components/ExcelBox";
 import { fmt } from "@/lib/types";
 import {
   listCustomers,
@@ -123,6 +124,10 @@ export default function B2bPage() {
           {saving ? "저장 중..." : "저장"}
         </button>
       </DateBar>
+
+      <div className="card">
+        <ExcelBox kind="b2b" onDone={fetchRows} />
+      </div>
 
       <div className="card overflow-x-auto">
         {loading ? (
