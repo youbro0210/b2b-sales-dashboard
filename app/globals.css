@@ -38,3 +38,11 @@ table.data td {
 table.data tr:hover td {
   @apply bg-slate-50;
 }
+/* 채널별 테두리(그리드 형태) */
+table.data.celled th,
+table.data.celled td {
+  @apply border border-slate-200;
+}
+table.data.celled tr:hover td {
+  @apply bg-transparent;
+}
