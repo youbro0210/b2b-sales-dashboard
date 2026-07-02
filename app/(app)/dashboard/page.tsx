@@ -19,6 +19,9 @@ import { fmt } from "@/lib/types";
 const won = (v: number, decimals = 2) => fmt(v, decimals);
 // 차트 축(만 단위)도 천단위 구분자 표시
 const manTick = (v: number) => `${Math.round(v / 10000).toLocaleString("ko-KR")}만`;
+// 백만원 단위 축/툴팁
+const millTick = (v: number) => (v / 1e6).toLocaleString("ko-KR", { maximumFractionDigits: 0 });
+const millTip = (v: number) => (v / 1e6).toLocaleString("ko-KR", { maximumFractionDigits: 2 }) + " 백만원";
 // 날짜를 Date 객체/문자열 어느 쪽이든 "YYYY-MM-DD"로 정규화 (date 컬럼은 시간대 없음 → UTC 사용)
 const ymd = (d: any): string => {
   if (!d) return "";
@@ -189,15 +192,18 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold">대시보드</h1>
           <p className="text-sm text-slate-500">B2B · 수출 · 상차 매출 통합 현황</p>
         </div>
-        <select
-          className="input max-w-[160px]"
-          value={month}
-          onChange={(e) => setMonth(e.target.value)}
-        >
-          {months.map((m) => (
-            <option key={m} value={m}>{m}</option>
-          ))}
-        </select>
+        <div className="flex flex-col items-end">
+          <select
+            className="input max-w-[160px]"
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+          >
+            {months.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+          <span className="text-[11px] text-slate-400 mt-1 mr-1">단위: 원</span>
+        </div>
       </div>
 
       {loading ? (
@@ -213,14 +219,17 @@ export default function DashboardPage() {
           </div>
 
           <div className="card" style={panelStyle}>
-            <h2 className="font-semibold mb-4 text-slate-100">일자별 매출 ({month})</h2>
+            <div className="flex items-start justify-between mb-4">
+              <h2 className="font-semibold text-slate-100">일자별 매출 ({month})</h2>
+              <span className="text-[11px] text-slate-400">단위: 백만원</span>
+            </div>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={daily} barCategoryGap="28%" margin={{ top: 8, right: 8 }}>
                 <CartesianGrid strokeDasharray="2 6" stroke={C.grid} vertical={false} />
                 <XAxis dataKey="day" tick={axisTick} axisLine={{ stroke: C.grid }} tickLine={false} />
-                <YAxis tickFormatter={manTick} width={52} tick={axisTick} axisLine={false} tickLine={false} />
+                <YAxis tickFormatter={millTick} width={44} tick={axisTick} axisLine={false} tickLine={false} />
                 <Tooltip
-                  formatter={(v: number) => won(v) + " 원"}
+                  formatter={(v: number) => millTip(v)}
                   contentStyle={tooltipStyle}
                   labelStyle={{ color: "#cbd5e1" }}
                   cursor={{ fill: "rgba(255,255,255,0.06)" }}
@@ -234,14 +243,17 @@ export default function DashboardPage() {
           </div>
 
           <div className="card" style={panelStyle}>
-            <h2 className="font-semibold mb-4 text-slate-100">월별 매출 추이 (전체)</h2>
+            <div className="flex items-start justify-between mb-4">
+              <h2 className="font-semibold text-slate-100">월별 매출 추이 (전체)</h2>
+              <span className="text-[11px] text-slate-400">단위: 백만원</span>
+            </div>
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={monthly} margin={{ top: 8, right: 8 }}>
                 <CartesianGrid strokeDasharray="2 6" stroke={C.grid} vertical={false} />
                 <XAxis dataKey="month" tick={axisTick} axisLine={{ stroke: C.grid }} tickLine={false} />
-                <YAxis tickFormatter={manTick} width={52} tick={axisTick} axisLine={false} tickLine={false} />
+                <YAxis tickFormatter={millTick} width={44} tick={axisTick} axisLine={false} tickLine={false} />
                 <Tooltip
-                  formatter={(v: number) => won(v) + " 원"}
+                  formatter={(v: number) => millTip(v)}
                   contentStyle={tooltipStyle}
                   labelStyle={{ color: "#cbd5e1" }}
                   cursor={{ stroke: "#475569" }}
@@ -382,7 +394,6 @@ function Kpi({ title, value, accent }: { title: string; value: string; accent?: 
       >
         {value}
       </div>
-      <div className="text-[11px] sm:text-xs mt-0.5 sm:mt-1" style={{ color: accent ? "#dbeafe" : "#94a3b8" }}>원</div>
     </div>
   );
 }
