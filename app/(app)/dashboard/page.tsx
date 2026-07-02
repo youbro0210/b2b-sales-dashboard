@@ -16,7 +16,7 @@ import {
 import { dashboardData } from "@/lib/actions";
 import { fmt } from "@/lib/types";
 
-const won = (v: number) => fmt(Math.round(v));
+const won = (v: number, decimals = 2) => fmt(v, decimals);
 // 차트 축(만 단위)도 천단위 구분자 표시
 const manTick = (v: number) => `${Math.round(v / 10000).toLocaleString("ko-KR")}만`;
 // 날짜를 Date 객체/문자열 어느 쪽이든 "YYYY-MM-DD"로 정규화 (date 컬럼은 시간대 없음 → UTC 사용)
@@ -159,6 +159,18 @@ export default function DashboardPage() {
       .sort((a, b) => b.total - a.total);
   }, [expMonth]);
 
+  // 일자별 거래처·품목·판매금액 TOP 10 (B2B + 수출 개별 매출)
+  const topSales = useMemo(() => {
+    const rows: { date: string; type: string; customer: string; product: string; amount: number; yen: boolean }[] = [];
+    b2bMonth.forEach((r) =>
+      rows.push({ date: ymd(r.sale_date), type: "B2B", customer: r.customer_name || "(미지정)", product: "-", amount: num(r.sales_amount), yen: false })
+    );
+    expMonth.forEach((r) =>
+      rows.push({ date: ymd(r.delivery_date), type: "수출", customer: r.customer_name || "(미지정)", product: r.product_name || "-", amount: num(r.sales_total), yen: r.country_name === "일본" })
+    );
+    return rows.filter((r) => r.amount > 0).sort((a, b) => b.amount - a.amount).slice(0, 10);
+  }, [b2bMonth, expMonth]);
+
   const months = useMemo(() => {
     const set = new Set<string>();
     [
@@ -196,7 +208,7 @@ export default function DashboardPage() {
             <Kpi title="총 매출 (선택 월)" value={won(totalSales)} accent />
             <Kpi title="B2B 매출" value={won(b2bSales)} />
             <Kpi title="수출 매출" value={won(expSales)} />
-            <Kpi title="상차 공급가액" value={won(loadSales)} />
+            <Kpi title="마트/온라인/특정" value={won(loadSales)} />
             <Kpi title="B2B 매출이익" value={won(b2bProfit)} />
           </div>
 
@@ -216,7 +228,7 @@ export default function DashboardPage() {
                 <Legend wrapperStyle={{ color: "#cbd5e1", fontSize: 12 }} />
                 <Bar dataKey="B2B" stackId="a" fill={C.blue} maxBarSize={44} />
                 <Bar dataKey="수출" stackId="a" fill={C.green} maxBarSize={44} />
-                <Bar dataKey="상차" stackId="a" fill={C.amber} maxBarSize={44} radius={[6, 6, 0, 0]} />
+                <Bar dataKey="상차" name="마트/온라인/특정" stackId="a" fill={C.amber} maxBarSize={44} radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -237,7 +249,7 @@ export default function DashboardPage() {
                 <Legend wrapperStyle={{ color: "#cbd5e1", fontSize: 12 }} />
                 <Line type="monotone" dataKey="B2B" stroke={C.blue} strokeWidth={3} dot={false} activeDot={{ r: 5 }} />
                 <Line type="monotone" dataKey="수출" stroke={C.green} strokeWidth={3} dot={false} activeDot={{ r: 5 }} />
-                <Line type="monotone" dataKey="상차" stroke={C.amber} strokeWidth={3} dot={false} activeDot={{ r: 5 }} />
+                <Line type="monotone" dataKey="상차" name="마트/온라인/특정" stroke={C.amber} strokeWidth={3} dot={false} activeDot={{ r: 5 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -274,11 +286,12 @@ export default function DashboardPage() {
                 <div className="space-y-4">
                   {byCountry.map((c) => {
                     const max = byCountry[0].total || 1;
+                    const dp = c.country === "일본" ? 4 : 2;
                     return (
                       <div key={c.country}>
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-semibold text-slate-100">🌏 {c.country}</span>
-                          <span className="text-sm font-bold tabular-nums text-emerald-300">{won(c.total)} 원</span>
+                          <span className="text-sm font-bold tabular-nums text-emerald-300">{won(c.total, dp)} 원</span>
                         </div>
                         <div className="mt-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
                           <div
@@ -290,7 +303,7 @@ export default function DashboardPage() {
                           {c.customers.map((cu) => (
                             <div key={cu.name} className="flex items-center justify-between pl-3 text-xs">
                               <span className="text-slate-300">↳ {cu.name}</span>
-                              <span className="tabular-nums text-slate-200">{won(cu.value)} 원</span>
+                              <span className="tabular-nums text-slate-200">{won(cu.value, dp)} 원</span>
                             </div>
                           ))}
                         </div>
@@ -300,6 +313,51 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
+          </div>
+
+          <div className="card" style={panelStyle}>
+            <h2 className="font-semibold mb-1 text-slate-100">일자별 판매 TOP 10 ({month})</h2>
+            <p className="text-[11px] text-slate-400 mb-4">거래처 · 품목별 판매금액 상위 10건 (B2B · 수출)</p>
+            {topSales.length === 0 ? (
+              <p className="text-sm text-slate-400">데이터가 없습니다.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-slate-400 text-xs border-b border-slate-700">
+                      <th className="text-left py-2 pr-3 font-medium">일자</th>
+                      <th className="text-left py-2 pr-3 font-medium">구분</th>
+                      <th className="text-left py-2 pr-3 font-medium">거래처</th>
+                      <th className="text-left py-2 pr-3 font-medium">품목</th>
+                      <th className="text-right py-2 font-medium">판매금액</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {topSales.map((r, i) => (
+                      <tr key={i} className="border-b border-slate-800/70">
+                        <td className="py-2 pr-3 text-slate-300 whitespace-nowrap">{r.date}</td>
+                        <td className="py-2 pr-3">
+                          <span
+                            className="px-1.5 py-0.5 rounded text-[11px] whitespace-nowrap"
+                            style={{
+                              background: r.type === "수출" ? "rgba(52,211,153,0.15)" : "rgba(56,189,248,0.15)",
+                              color: r.type === "수출" ? "#6ee7b7" : "#7dd3fc",
+                            }}
+                          >
+                            {r.type}
+                          </span>
+                        </td>
+                        <td className="py-2 pr-3 text-slate-100">{r.customer}</td>
+                        <td className="py-2 pr-3 text-slate-300">{r.product}</td>
+                        <td className="py-2 text-right tabular-nums font-semibold text-slate-100 whitespace-nowrap">
+                          {won(r.amount, r.yen ? 4 : 2)} 원
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </>
       )}
