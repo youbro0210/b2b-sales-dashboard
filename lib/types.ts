@@ -66,8 +66,15 @@ export type ExportSale = {
   factory_self: string | null;
 };
 
-export const fmt = (n: number | null | undefined) =>
-  (n ?? 0).toLocaleString("ko-KR");
+// 금액 표기: 기본 소수점 2자리 (엔화 등 특수 통화는 decimals=4로 호출)
+export const fmt = (n: number | null | undefined, decimals = 2) =>
+  (Number(n) || 0).toLocaleString("ko-KR", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+// 정수 표기(수량 등)
+export const fmtInt = (n: number | null | undefined) =>
+  (Number(n) || 0).toLocaleString("ko-KR", { maximumFractionDigits: 0 });
 
 // 날짜(Date 객체/문자열 무엇이든)를 숫자 형식 "YYYY-MM-DD" 로 변환
 // (Date 객체를 그냥 문자열화하면 "Wed Jul 01 2026" 같은 영문 표기가 나오는 문제 방지)
