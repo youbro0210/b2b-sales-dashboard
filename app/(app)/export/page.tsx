@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { fmt, ymd } from "@/lib/types";
+import { fmt, fmtInt, ymd } from "@/lib/types";
 import ExcelBox from "@/components/ExcelBox";
 import NumberInput from "@/components/NumberInput";
 import {
@@ -267,9 +267,9 @@ export default function ExportPage() {
                   <td>{r.country_name}</td>
                   <td className="text-xs text-slate-500">{r.erp_code}</td>
                   <td>{r.product_name}</td>
-                  <td className="text-right">{fmt(num(r.qty_unit))}</td>
-                  <td className="text-right">{fmt(num(r.sales_total))}</td>
-                  <td className="text-right">{fmt(num(r.mfg_cost_total))}</td>
+                  <td className="text-right">{fmtInt(num(r.qty_unit))}</td>
+                  <td className="text-right">{fmt(num(r.sales_total), r.country_name === "일본" ? 4 : 2)}</td>
+                  <td className="text-right">{fmt(num(r.mfg_cost_total), r.country_name === "일본" ? 4 : 2)}</td>
                   <td className="text-right">{r.exchange_rate}</td>
                   <td>
                     <button className="text-red-500 text-sm"
