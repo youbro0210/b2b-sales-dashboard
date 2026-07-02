@@ -136,6 +136,9 @@ export default function ExportPage() {
     [rows]
   );
 
+  // 엔화(일본) 매출은 소수 4자리, 그 외는 2자리
+  const amtDp = form.country_name === "일본" ? 4 : 2;
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -223,13 +226,13 @@ export default function ExportPage() {
           <Field label="ERP CODE"><input className="input" value={form.erp_code} onChange={(e) => set({ erp_code: e.target.value })} /></Field>
           <Field label="단위"><input className="input" value={form.unit} onChange={(e) => set({ unit: e.target.value })} /></Field>
           <Field label="대분류"><input className="input" value={form.category} onChange={(e) => set({ category: e.target.value })} /></Field>
-          <Field label="매출액/단위"><Num value={form.sales_per_unit} onChange={(v) => set({ sales_per_unit: v, sales_total: v * num(form.qty_unit) })} /></Field>
-          <Field label="수량(단위)"><Num value={form.qty_unit} onChange={(v) => set({ qty_unit: v, sales_total: num(form.sales_per_unit) * v })} /></Field>
-          <Field label="수량(박스)"><Num value={form.qty_box} onChange={(v) => set({ qty_box: v })} /></Field>
-          <Field label="매출 계 (자동=매출액×수량, 수정가능)"><Num value={form.sales_total} onChange={(v) => set({ sales_total: v })} /></Field>
-          <Field label="제조원가 계"><Num value={form.mfg_cost_total} onChange={(v) => set({ mfg_cost_total: v })} /></Field>
-          <Field label="물류비"><Num value={form.logistics_cost} onChange={(v) => set({ logistics_cost: v })} /></Field>
-          <Field label="환율"><Num value={form.exchange_rate} onChange={(v) => set({ exchange_rate: v })} /></Field>
+          <Field label={`매출액/단위 ${amtDp === 4 ? "(엔화·소수4자리)" : "(소수2자리)"}`}><Num value={form.sales_per_unit} decimals={amtDp} onChange={(v) => set({ sales_per_unit: v, sales_total: v * num(form.qty_unit) })} /></Field>
+          <Field label="수량(단위)"><Num value={form.qty_unit} decimals={0} onChange={(v) => set({ qty_unit: v, sales_total: num(form.sales_per_unit) * v })} /></Field>
+          <Field label="수량(박스)"><Num value={form.qty_box} decimals={0} onChange={(v) => set({ qty_box: v })} /></Field>
+          <Field label="매출 계 (자동=매출액×수량, 수정가능)"><Num value={form.sales_total} decimals={amtDp} onChange={(v) => set({ sales_total: v })} /></Field>
+          <Field label="제조원가 계"><Num value={form.mfg_cost_total} decimals={amtDp} onChange={(v) => set({ mfg_cost_total: v })} /></Field>
+          <Field label="물류비"><Num value={form.logistics_cost} decimals={amtDp} onChange={(v) => set({ logistics_cost: v })} /></Field>
+          <Field label="환율"><Num value={form.exchange_rate} decimals={4} onChange={(v) => set({ exchange_rate: v })} /></Field>
           <Field label="정부지원사업"><input className="input" value={form.gov_support} onChange={(e) => set({ gov_support: e.target.value })} /></Field>
         </div>
         <div className="flex gap-2 mt-4">
@@ -294,6 +297,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </div>
   );
 }
-function Num({ value, onChange }: { value: number; onChange: (v: number) => void }) {
-  return <NumberInput value={value} onChange={onChange} />;
+function Num({ value, onChange, decimals }: { value: number; onChange: (v: number) => void; decimals?: number }) {
+  return <NumberInput value={value} onChange={onChange} decimals={decimals} />;
 }
