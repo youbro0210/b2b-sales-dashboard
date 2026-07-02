@@ -91,9 +91,9 @@ export default function LoadingPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold">상차금액 입력</h1>
+        <h1 className="text-2xl font-bold">마트/온라인/특정 입력</h1>
         <p className="text-sm text-slate-500">
-          상차일 기준 · 채널별 공급가액 <span className="text-slate-400">(합계 행은 자동 계산되며 총 합계에서 제외됩니다)</span>
+          일자 기준 · 채널별 공급가액 <span className="text-slate-400">(합계 행은 자동 계산되며 총 합계에서 제외됩니다)</span>
         </p>
       </div>
 
