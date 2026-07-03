@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   ResponsiveContainer,
   BarChart,
@@ -212,10 +213,10 @@ export default function DashboardPage() {
         <>
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
             <Kpi title="총 매출 (선택 월)" value={won(totalSales)} accent />
-            <Kpi title="B2B 매출" value={won(b2bSales)} />
-            <Kpi title="수출 매출" value={won(expSales)} />
-            <Kpi title="마트/온라인/특정" value={won(loadSales)} />
-            <Kpi title="B2B 매출이익" value={won(b2bProfit)} />
+            <Kpi title="B2B 매출" value={won(b2bSales)} href="/b2b" />
+            <Kpi title="수출 매출" value={won(expSales)} href="/export" />
+            <Kpi title="마트/온라인/특정" value={won(loadSales)} href="/loading" />
+            <Kpi title="B2B 매출이익" value={won(b2bProfit)} href="/b2b" />
           </div>
 
           <div className="card" style={panelStyle}>
@@ -377,23 +378,38 @@ export default function DashboardPage() {
   );
 }
 
-function Kpi({ title, value, accent }: { title: string; value: string; accent?: boolean }) {
-  return (
-    <div
-      className="card !p-4 sm:!p-5"
-      style={
-        accent
-          ? { background: "linear-gradient(135deg,#0184CA 0%,#0A2540 100%)", borderColor: "#0A2540", color: "#ffffff" }
-          : undefined
-      }
-    >
-      <div className="text-[11px] sm:text-xs leading-tight" style={{ color: accent ? "#e0f2fe" : "#64748b" }}>{title}</div>
+function Kpi({ title, value, accent, href }: { title: string; value: string; accent?: boolean; href?: string }) {
+  const inner = (
+    <>
+      <div className="flex items-center justify-between">
+        <div className="text-[11px] sm:text-xs leading-tight" style={{ color: accent ? "#e0f2fe" : "#64748b" }}>{title}</div>
+        {href && <span className="text-slate-300 text-xs leading-none" style={{ color: accent ? "#e0f2fe" : "#94a3b8" }}>›</span>}
+      </div>
       <div
         className="text-base sm:text-xl font-bold mt-1.5 sm:mt-2 leading-tight tabular-nums break-keep"
         style={{ color: accent ? "#ffffff" : undefined }}
       >
         {value}
       </div>
+    </>
+  );
+  const style = accent
+    ? { background: "linear-gradient(135deg,#0184CA 0%,#0A2540 100%)", borderColor: "#0A2540", color: "#ffffff" }
+    : undefined;
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="card !p-4 sm:!p-5 block transition hover:-translate-y-0.5 hover:shadow-lg hover:ring-2 hover:ring-sky-300/60 cursor-pointer"
+        style={style}
+      >
+        {inner}
+      </Link>
+    );
+  }
+  return (
+    <div className="card !p-4 sm:!p-5" style={style}>
+      {inner}
     </div>
   );
 }
