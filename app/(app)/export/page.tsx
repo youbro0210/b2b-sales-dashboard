@@ -43,6 +43,12 @@ type Form = typeof blank;
 
 export default function ExportPage() {
   const [month, setMonth] = useState(() => monthKST());
+
+  // 대시보드에서 넘어온 월(?month=YYYY-MM)로 열기
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("month");
+    if (q && /^\d{4}-\d{2}$/.test(q)) setMonth(q);
+  }, []);
   const [rows, setRows] = useState<any[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [countries, setCountries] = useState<Country[]>([]);
