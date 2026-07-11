@@ -29,7 +29,9 @@ export default async function AppLayout({
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
       <Sidebar email={user.email} isAdmin={user.isAdmin} />
-      <main className="flex-1 min-w-0 p-4 md:p-8 overflow-x-auto w-full">{children}</main>
+      {/* overflow-x-auto 를 두면 차트 폭 계산이 어긋나고 하단 여백이 생긴다.
+          가로 스크롤이 필요한 표는 각 카드에서 개별로 처리한다. */}
+      <main className="flex-1 min-w-0 w-full p-4 pb-8 md:p-8">{children}</main>
     </div>
   );
 }
