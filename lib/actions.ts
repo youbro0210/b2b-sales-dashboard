@@ -216,6 +216,19 @@ export async function deleteChannel(id: number) {
   await sql`delete from channels where id = ${id}`;
 }
 
+// ----------------- 서버 기준 오늘 날짜 -----------------
+
+// 기기(브라우저) 시계는 틀릴 수 있으므로, 오늘 날짜는 서버 시각을
+// 한국시간(Asia/Seoul)으로 변환해 사용한다.
+export async function serverToday(): Promise<string> {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
 // ----------------- B2B 매출 -----------------
 
 export async function listB2bByDate(date: string) {
