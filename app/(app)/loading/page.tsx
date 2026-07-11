@@ -11,6 +11,7 @@ import {
   saveLoading,
   countLoadingRange,
   deleteLoadingRange,
+  serverToday,
 } from "@/lib/actions";
 
 type Channel = { id: number; group_name: string | null; name: string; sort_order: number };
@@ -88,10 +89,12 @@ export default function LoadingPage() {
     listChannels().then((d) => setChannels(d as Channel[]));
   }, []);
 
-  // 대시보드에서 넘어온 일자(?date=YYYY-MM-DD)로 열기
+  // 대시보드에서 넘어온 일자(?date=YYYY-MM-DD)로 열기.
+  // 없으면 서버 시각(한국시간) 기준 오늘로 맞춘다.
   useEffect(() => {
     const q = new URLSearchParams(window.location.search).get("date");
     if (q && /^\d{4}-\d{2}-\d{2}$/.test(q)) setDate(q);
+    else serverToday().then((d) => d && setDate(d)).catch(() => {});
   }, []);
 
   const fetchValues = useCallback(async () => {
