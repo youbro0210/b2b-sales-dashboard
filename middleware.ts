@@ -21,8 +21,9 @@ export async function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
+// PWA 리소스(매니페스트·앱 아이콘)는 로그인 없이 접근 가능해야 설치가 된다.
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|icons/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
