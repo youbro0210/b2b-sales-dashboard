@@ -237,12 +237,32 @@ export default function DashboardPage() {
         <div className="text-slate-500">불러오는 중...</div>
       ) : (
         <>
+          {/* 선택 월 KPI — 모바일 2열에서 줄이 맞도록 총매출을 2칸 차지시킨다 */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
-            <Kpi title="총 매출 (선택 월)" value={eok(totalSales)} accent />
+            <Kpi title="총 매출 (선택 월)" value={eok(totalSales)} accent span2 />
             <Kpi title="B2B 매출" value={eok(b2bSales)} href="/b2b" />
             <Kpi title="수출 매출" value={eok(expSales)} href="/export" />
             <Kpi title="마트/온라인/특정" value={eok(loadSales)} href="/loading" />
             <Kpi title="B2B 매출이익" value={eok(b2bProfit)} href="/b2b" />
+          </div>
+
+          {/* 오늘 매출 — 총매출 라인 바로 밑, 앰버 톤으로 구분 */}
+          <div className="card !bg-amber-50 !border-amber-200">
+            <div className="flex items-start justify-between gap-2 mb-3 flex-wrap">
+              <div>
+                <h2 className="font-semibold text-amber-900">오늘 매출</h2>
+                <p className="text-[11px] text-amber-700/70 mt-0.5">
+                  {todayStr} · 작년 같은 날({lastYearTodayStr}) 대비
+                </p>
+              </div>
+              <span className="text-[11px] text-amber-700/70">단위: 원</span>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <Today title="총 매출" value={todayStats.cur.total} prev={todayStats.prev.total} accent />
+              <Today title="B2B 매출" value={todayStats.cur.b2b} prev={todayStats.prev.b2b} />
+              <Today title="수출 매출" value={todayStats.cur.exp} prev={todayStats.prev.exp} />
+              <Today title="마트/온라인/특정" value={todayStats.cur.load} prev={todayStats.prev.load} />
+            </div>
           </div>
 
           <div className="card" style={panelStyle}>
@@ -342,23 +362,6 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-          <div className="card">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h2 className="font-semibold text-slate-800">오늘 매출</h2>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  {todayStr} · 작년 같은 날({lastYearTodayStr}) 대비
-                </p>
-              </div>
-              <span className="text-[11px] text-slate-400">단위: 원</span>
-            </div>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <Today title="총 매출" value={todayStats.cur.total} prev={todayStats.prev.total} accent />
-              <Today title="B2B 매출" value={todayStats.cur.b2b} prev={todayStats.prev.b2b} />
-              <Today title="수출 매출" value={todayStats.cur.exp} prev={todayStats.prev.exp} />
-              <Today title="마트/온라인/특정" value={todayStats.cur.load} prev={todayStats.prev.load} />
-            </div>
-          </div>
         </>
       )}
     </div>
@@ -382,17 +385,17 @@ function Today({
   return (
     <div
       className={`rounded-xl border p-4 ${
-        accent ? "border-transparent" : "border-slate-200 bg-slate-50"
+        accent ? "border-transparent" : "border-amber-200 bg-white"
       }`}
       style={
         accent
-          ? { background: "linear-gradient(135deg,#0184CA 0%,#0A2540 100%)" }
+          ? { background: "linear-gradient(135deg,#f59e0b 0%,#b45309 100%)" }
           : undefined
       }
     >
       <div
         className="text-[11px] leading-tight"
-        style={{ color: accent ? "#e0f2fe" : "#64748b" }}
+        style={{ color: accent ? "#fef3c7" : "#92400e" }}
       >
         {title}
       </div>
@@ -404,11 +407,11 @@ function Today({
       </div>
       <div className="mt-1 text-[11px] tabular-nums">
         {diff === null ? (
-          <span style={{ color: accent ? "#bae6fd" : "#94a3b8" }}>작년 기록 없음</span>
+          <span style={{ color: accent ? "#fde68a" : "#a8a29e" }}>작년 기록 없음</span>
         ) : (
-          <span style={{ color: accent ? "#bae6fd" : up ? "#16a34a" : "#dc2626" }}>
+          <span style={{ color: accent ? "#fef3c7" : up ? "#16a34a" : "#dc2626" }}>
             {up ? "▲" : "▼"} {Math.abs(diff).toFixed(1)}%{" "}
-            <span style={{ color: accent ? "#bae6fd" : "#94a3b8" }}>vs 작년</span>
+            <span style={{ color: accent ? "#fde68a" : "#a8a29e" }}>vs 작년</span>
           </span>
         )}
       </div>
@@ -416,7 +419,20 @@ function Today({
   );
 }
 
-function Kpi({ title, value, accent, href }: { title: string; value: string; accent?: boolean; href?: string }) {
+function Kpi({
+  title,
+  value,
+  accent,
+  href,
+  span2,
+}: {
+  title: string;
+  value: string;
+  accent?: boolean;
+  href?: string;
+  span2?: boolean;
+}) {
+  const spanCls = span2 ? "col-span-2 lg:col-span-1" : "";
   const inner = (
     <>
       <div className="flex items-center justify-between">
@@ -438,7 +454,7 @@ function Kpi({ title, value, accent, href }: { title: string; value: string; acc
     return (
       <Link
         href={href}
-        className="card !p-4 sm:!p-5 block transition hover:-translate-y-0.5 hover:shadow-lg hover:ring-2 hover:ring-sky-300/60 cursor-pointer"
+        className={`card !p-4 sm:!p-5 block transition hover:-translate-y-0.5 hover:shadow-lg hover:ring-2 hover:ring-sky-300/60 cursor-pointer ${spanCls}`}
         style={style}
       >
         {inner}
@@ -446,7 +462,7 @@ function Kpi({ title, value, accent, href }: { title: string; value: string; acc
     );
   }
   return (
-    <div className="card !p-4 sm:!p-5" style={style}>
+    <div className={`card !p-4 sm:!p-5 ${spanCls}`} style={style}>
       {inner}
     </div>
   );
