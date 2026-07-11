@@ -17,7 +17,7 @@ import {
   Cell,
 } from "recharts";
 import { dashboardData } from "@/lib/actions";
-import { fmt } from "@/lib/types";
+import { fmt, todayKST, monthKST } from "@/lib/types";
 
 const won = (v: number, decimals = 2) => fmt(v, decimals);
 // KPI 카드: 억원 단위 (소수점 2자리)
@@ -76,9 +76,7 @@ export default function DashboardPage() {
   const [b2b, setB2b] = useState<Any[]>([]);
   const [exp, setExp] = useState<Any[]>([]);
   const [load, setLoad] = useState<Any[]>([]);
-  const [month, setMonth] = useState<string>(() =>
-    new Date().toISOString().slice(0, 7)
-  );
+  const [month, setMonth] = useState<string>(() => monthKST());
   const [loading, setLoading] = useState(true);
 
   // 좁은 화면(모바일)에서는 차트에 최소 폭을 주고 가로 스크롤시켜
@@ -189,7 +187,7 @@ export default function DashboardPage() {
   }, [totalByMonth, year, prevYear]);
 
   // 오늘(현재일) 매출 — 구분별 + 작년 같은 날 대비
-  const todayStr = ymd(new Date());
+  const todayStr = todayKST();
   const lastYearTodayStr = `${Number(todayStr.slice(0, 4)) - 1}${todayStr.slice(4)}`;
 
   const todayStats = useMemo(() => {
