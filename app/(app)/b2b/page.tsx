@@ -11,6 +11,7 @@ import {
   listB2bRange,
   saveB2b,
   deleteB2b,
+  serverToday,
 } from "@/lib/actions";
 
 type Customer = { id: number; name: string };
@@ -38,10 +39,12 @@ export default function B2bPage() {
     listCustomers(["b2b", "both"]).then((d) => setCustomers(d as Customer[]));
   }, []);
 
-  // 대시보드에서 넘어온 일자(?date=YYYY-MM-DD)로 열기
+  // 대시보드에서 넘어온 일자(?date=YYYY-MM-DD)로 열기.
+  // 없으면 서버 시각(한국시간) 기준 오늘로 맞춘다.
   useEffect(() => {
     const q = new URLSearchParams(window.location.search).get("date");
     if (q && /^\d{4}-\d{2}-\d{2}$/.test(q)) setDate(q);
+    else serverToday().then((d) => d && setDate(d)).catch(() => {});
   }, []);
 
   const fetchRows = useCallback(async () => {
