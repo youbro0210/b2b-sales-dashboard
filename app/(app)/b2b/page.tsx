@@ -38,6 +38,12 @@ export default function B2bPage() {
     listCustomers(["b2b", "both"]).then((d) => setCustomers(d as Customer[]));
   }, []);
 
+  // 대시보드에서 넘어온 일자(?date=YYYY-MM-DD)로 열기
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("date");
+    if (q && /^\d{4}-\d{2}-\d{2}$/.test(q)) setDate(q);
+  }, []);
+
   const fetchRows = useCallback(async () => {
     setLoading(true);
     const data = (await listB2bByDate(date)) as any[];
