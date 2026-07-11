@@ -232,7 +232,6 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold">대시보드</h1>
-          <p className="text-sm text-slate-500">B2B · 수출 · 상차 매출 통합 현황</p>
         </div>
         <div className="flex flex-col items-end">
           <select
