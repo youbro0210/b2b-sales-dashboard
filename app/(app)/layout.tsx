@@ -29,7 +29,7 @@ export default async function AppLayout({
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
       <Sidebar email={user.email} isAdmin={user.isAdmin} />
-      <main className="flex-1 p-4 md:p-8 overflow-x-auto w-full">{children}</main>
+      <main className="flex-1 min-w-0 p-4 md:p-8 overflow-x-auto w-full">{children}</main>
     </div>
   );
 }
