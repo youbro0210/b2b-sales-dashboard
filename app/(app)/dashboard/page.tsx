@@ -74,6 +74,15 @@ export default function DashboardPage() {
   );
   const [loading, setLoading] = useState(true);
 
+  // 좁은 화면(모바일)에서는 막대 위 금액 라벨을 숨겨 겹침을 방지한다.
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const check = () => setNarrow(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -216,7 +225,13 @@ export default function DashboardPage() {
               <ResponsiveContainer width="100%" height={320}>
                 <BarChart data={daily} barCategoryGap="22%" margin={{ top: 24, right: 8 }}>
                   <CartesianGrid strokeDasharray="2 6" stroke={C.grid} vertical={false} />
-                  <XAxis dataKey="day" tick={axisTick} axisLine={{ stroke: C.grid }} tickLine={false} />
+                  <XAxis
+                    dataKey="day"
+                    tick={axisTick}
+                    axisLine={{ stroke: C.grid }}
+                    tickLine={false}
+                    interval={narrow ? "preserveStartEnd" : 0}
+                  />
                   <YAxis tickFormatter={millTick} width={44} tick={axisTick} axisLine={false} tickLine={false} />
                   <Tooltip
                     formatter={(v: number) => millTip(v)}
@@ -226,10 +241,14 @@ export default function DashboardPage() {
                   />
                   <Legend wrapperStyle={{ color: "#cbd5e1", fontSize: 12 }} />
                   <Bar dataKey="작년" fill={C.slate} maxBarSize={26} radius={[4, 4, 0, 0]}>
-                    <LabelList dataKey="작년" position="top" formatter={millLabel} fill="#94a3b8" fontSize={10} />
+                    {!narrow && (
+                      <LabelList dataKey="작년" position="top" formatter={millLabel} fill="#94a3b8" fontSize={10} />
+                    )}
                   </Bar>
                   <Bar dataKey="올해" fill={C.blue} maxBarSize={26} radius={[4, 4, 0, 0]}>
-                    <LabelList dataKey="올해" position="top" formatter={millLabel} fill="#e0f2fe" fontSize={10} />
+                    {!narrow && (
+                      <LabelList dataKey="올해" position="top" formatter={millLabel} fill="#e0f2fe" fontSize={10} />
+                    )}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -265,7 +284,9 @@ export default function DashboardPage() {
                   dot={{ r: 2 }}
                   activeDot={{ r: 5 }}
                 >
-                  <LabelList dataKey="작년" position="bottom" formatter={millLabel} fill="#94a3b8" fontSize={10} />
+                  {!narrow && (
+                    <LabelList dataKey="작년" position="bottom" formatter={millLabel} fill="#94a3b8" fontSize={10} />
+                  )}
                 </Line>
                 <Line
                   type="monotone"
@@ -275,7 +296,9 @@ export default function DashboardPage() {
                   dot={{ r: 3 }}
                   activeDot={{ r: 6 }}
                 >
-                  <LabelList dataKey="올해" position="top" formatter={millLabel} fill="#e0f2fe" fontSize={10} />
+                  {!narrow && (
+                    <LabelList dataKey="올해" position="top" formatter={millLabel} fill="#e0f2fe" fontSize={10} />
+                  )}
                 </Line>
               </LineChart>
             </ResponsiveContainer>
