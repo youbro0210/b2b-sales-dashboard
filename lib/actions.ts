@@ -267,6 +267,22 @@ export async function deleteB2b(id: number) {
 
 // ----------------- 상차금액 -----------------
 
+// 기간 내 상차 데이터 건수 (삭제 전 확인용)
+export async function countLoadingRange(from: string, to: string) {
+  await requireUser();
+  const rows = (await sql`select count(*)::int as n from loading_amounts
+                          where load_date >= ${from} and load_date <= ${to}`) as any[];
+  return Number(rows?.[0]?.n ?? 0);
+}
+
+// 기간 내 상차 데이터 삭제 (잘못 업로드한 데이터 정리용)
+export async function deleteLoadingRange(from: string, to: string) {
+  await requireUser();
+  await sql`delete from loading_amounts
+            where load_date >= ${from} and load_date <= ${to}`;
+  return { ok: true };
+}
+
 export async function listLoadingByDate(date: string) {
   await requireUser();
   return await sql`select channel_id, supply_amount from loading_amounts where load_date = ${date}`;
@@ -383,20 +399,35 @@ export async function bulkSaveB2b(
 
 export async function bulkSaveLoading(
   rows: { load_date: string; channel_name: string; supply_amount: number }[]
-): Promise<{ ok: boolean; count: number; error?: string }> {
+): Promise<{ ok: boolean; count: number; error?: string; skipped?: string[] }> {
   try {
     await requireUser();
     const chans = await sql`select id, name from channels`;
     const map = new Map(chans.map((c: any) => [String(c.name).trim(), c.id]));
+
+    const valid = rows.filter((r) => r.load_date);
+    // 같은 날짜를 다시 올리면 기존 데이터를 "대체"한다 (여러 번 올려도 중복 누적되지 않음)
+    const dates = Array.from(new Set(valid.map((r) => r.load_date)));
+    for (const d of dates) {
+      await sql`delete from loading_amounts where load_date = ${d}`;
+    }
+
     let n = 0;
-    for (const r of rows) {
-      if (!r.load_date || !r.supply_amount) continue;
-      const cid = map.get(String(r.channel_name || "").trim()) ?? null;
+    const skipped: string[] = [];
+    for (const r of valid) {
+      const name = String(r.channel_name || "").trim();
+      const cid = map.get(name) ?? null;
+      // 기준정보에 없는 채널은 건너뛴다 (화면에 안 보이는 유령 데이터 방지)
+      if (cid == null) {
+        if (name && !skipped.includes(name)) skipped.push(name);
+        continue;
+      }
+      if (!r.supply_amount) continue;
       await sql`insert into loading_amounts (load_date, channel_id, channel_name, supply_amount)
-                values (${r.load_date}, ${cid}, ${r.channel_name || null}, ${r.supply_amount || 0})`;
+                values (${r.load_date}, ${cid}, ${name}, ${r.supply_amount || 0})`;
       n++;
     }
-    return { ok: true, count: n };
+    return { ok: true, count: n, skipped };
   } catch (e: any) {
     return { ok: false, count: 0, error: e?.message ?? "업로드 실패" };
   }
