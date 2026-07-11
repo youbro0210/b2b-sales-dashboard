@@ -140,6 +140,15 @@ export default function LoadingPage() {
           kind="loading"
           onDone={fetchValues}
           exportName={`상차금액_${date}.xlsx`}
+          // 양식: 선택한 일자 + 구분 + 채널명이 미리 채워지고, 공급가액만 비워둠
+          // (합계 행은 자동계산이므로 제외)
+          getTemplateRows={() =>
+            grouped.flatMap((g) =>
+              g.items
+                .filter((c) => !isSum(c.name))
+                .map((c) => [date, g.group, c.name, ""])
+            )
+          }
           getExport={() => [
             ["일자", "구분", "채널명", "공급가액"],
             ...grouped.flatMap((g) =>
