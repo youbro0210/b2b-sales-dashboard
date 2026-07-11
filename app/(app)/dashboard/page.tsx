@@ -14,6 +14,7 @@ import {
   CartesianGrid,
   Legend,
   LabelList,
+  Cell,
 } from "recharts";
 import { dashboardData } from "@/lib/actions";
 import { fmt } from "@/lib/types";
@@ -153,6 +154,19 @@ export default function DashboardPage() {
     return out;
   }, [totalByDate, year, mm, prevYear]);
 
+  // 올해 매출이 가장 높은 날 (막대를 다른 색으로 강조)
+  const peakIdx = useMemo(() => {
+    let idx = -1;
+    let max = 0;
+    daily.forEach((d, i) => {
+      if (d.올해 > max) {
+        max = d.올해;
+        idx = i;
+      }
+    });
+    return idx;
+  }, [daily]);
+
   // 월별 매출 추이: 올해 1~12월 vs 작년 같은 달
   const monthly = useMemo(() => {
     const out: { month: string; 올해: number; 작년: number }[] = [];
@@ -217,7 +231,9 @@ export default function DashboardPage() {
                 일자별 매출 ({month}){" "}
                 <span className="text-xs font-normal text-slate-400">vs {prevYear}년 동월</span>
               </h2>
-              <span className="text-[11px] text-slate-400">단위: 백만원</span>
+              <span className="text-[11px] text-slate-400">
+                <span style={{ color: C.amber }}>■</span> 최고 매출일 · 단위: 백만원
+              </span>
             </div>
             {daily.length === 0 ? (
               <p className="text-sm text-slate-400">데이터가 없습니다.</p>
@@ -246,6 +262,9 @@ export default function DashboardPage() {
                     )}
                   </Bar>
                   <Bar dataKey="올해" fill={C.blue} maxBarSize={26} radius={[4, 4, 0, 0]}>
+                    {daily.map((_, i) => (
+                      <Cell key={i} fill={i === peakIdx ? C.amber : C.blue} />
+                    ))}
                     {!narrow && (
                       <LabelList dataKey="올해" position="top" formatter={millLabel} fill="#e0f2fe" fontSize={10} />
                     )}
