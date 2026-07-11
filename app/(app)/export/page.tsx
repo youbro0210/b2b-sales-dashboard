@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { fmt, fmtInt, ymd } from "@/lib/types";
+import { fmt, fmtInt, ymd, todayKST, monthKST } from "@/lib/types";
 import ExcelBox from "@/components/ExcelBox";
 import NumberInput from "@/components/NumberInput";
 import {
@@ -25,7 +25,7 @@ const blank = {
   customer_name: "",
   country_id: null as number | null,
   country_name: "",
-  delivery_date: new Date().toISOString().slice(0, 10),
+  delivery_date: todayKST(),
   erp_code: "",
   product_name: "",
   unit: "",
@@ -42,7 +42,7 @@ const blank = {
 type Form = typeof blank;
 
 export default function ExportPage() {
-  const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
+  const [month, setMonth] = useState(() => monthKST());
   const [rows, setRows] = useState<any[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [countries, setCountries] = useState<Country[]>([]);
@@ -110,7 +110,7 @@ export default function ExportPage() {
       customer_name: r.customer_name ?? "",
       country_id: r.country_id,
       country_name: r.country_name ?? "",
-      delivery_date: ymd(r.delivery_date) || new Date().toISOString().slice(0, 10),
+      delivery_date: ymd(r.delivery_date) || todayKST(),
       erp_code: r.erp_code ?? "",
       product_name: r.product_name ?? "",
       unit: r.unit ?? "",
