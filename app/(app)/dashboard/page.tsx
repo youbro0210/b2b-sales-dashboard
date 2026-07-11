@@ -284,8 +284,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="card" style={panelStyle}>
-            <div className="flex items-start justify-between mb-4">
+          <div className="card overflow-hidden min-w-0" style={panelStyle}>
+            <div className="flex items-start justify-between gap-2 flex-wrap mb-4">
               <h2 className="font-semibold text-slate-100">
                 일자별 매출 ({month}){" "}
                 <span className="text-xs font-normal text-slate-400">vs {prevYear}년 동월</span>
@@ -297,8 +297,8 @@ export default function DashboardPage() {
             {daily.length === 0 ? (
               <p className="text-sm text-slate-400">데이터가 없습니다.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <div style={{ minWidth: narrow ? Math.max(360, daily.length * 56) : undefined }}>
+              <div className="w-full max-w-full overflow-x-auto">
+                <div style={{ minWidth: narrow ? Math.max(320, daily.length * 56) : undefined }}>
               <ResponsiveContainer width="100%" height={320}>
                 <BarChart data={daily} barCategoryGap="22%" margin={{ top: 24, right: 8 }}>
                   <CartesianGrid strokeDasharray="2 6" stroke={C.grid} vertical={false} />
@@ -333,15 +333,15 @@ export default function DashboardPage() {
             )}
           </div>
 
-          <div className="card" style={panelStyle}>
-            <div className="flex items-start justify-between mb-4">
+          <div className="card overflow-hidden min-w-0" style={panelStyle}>
+            <div className="flex items-start justify-between gap-2 flex-wrap mb-4">
               <h2 className="font-semibold text-slate-100">
                 월별 매출 추이 ({year}년){" "}
                 <span className="text-xs font-normal text-slate-400">vs {prevYear}년</span>
               </h2>
               <span className="text-[11px] text-slate-400">단위: 백만원</span>
             </div>
-            <div className="overflow-x-auto">
+            <div className="w-full max-w-full overflow-x-auto">
               <div style={{ minWidth: narrow ? 720 : undefined }}>
             <ResponsiveContainer width="100%" height={320}>
               <LineChart data={monthly} margin={{ top: 26, right: 14, bottom: 6 }}>
