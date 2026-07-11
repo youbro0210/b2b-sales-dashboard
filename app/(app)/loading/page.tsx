@@ -88,6 +88,12 @@ export default function LoadingPage() {
     listChannels().then((d) => setChannels(d as Channel[]));
   }, []);
 
+  // 대시보드에서 넘어온 일자(?date=YYYY-MM-DD)로 열기
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("date");
+    if (q && /^\d{4}-\d{2}-\d{2}$/.test(q)) setDate(q);
+  }, []);
+
   const fetchValues = useCallback(async () => {
     setLoading(true);
     const data = (await listLoadingByDate(date)) as any[];
