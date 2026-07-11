@@ -4,6 +4,10 @@
 
 html,
 body {
+  /* 안드로이드/윈도우 다크모드와 무관하게 항상 라이트로 고정.
+     (color-scheme 을 light 로 두면 input·select·날짜선택기 같은
+      브라우저 기본 UI도 다크로 뒤집히지 않는다) */
+  color-scheme: light;
   background: #f1f5f9;
   color: #0f172a;
 }
