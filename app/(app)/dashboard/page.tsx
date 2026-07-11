@@ -75,7 +75,8 @@ export default function DashboardPage() {
   );
   const [loading, setLoading] = useState(true);
 
-  // 좁은 화면(모바일)에서는 막대 위 금액 라벨을 숨겨 겹침을 방지한다.
+  // 좁은 화면(모바일)에서는 차트에 최소 폭을 주고 가로 스크롤시켜
+  // 막대/라벨이 겹치지 않게 한다.
   const [narrow, setNarrow] = useState(false);
   useEffect(() => {
     const check = () => setNarrow(window.innerWidth < 768);
@@ -238,6 +239,8 @@ export default function DashboardPage() {
             {daily.length === 0 ? (
               <p className="text-sm text-slate-400">데이터가 없습니다.</p>
             ) : (
+              <div className="overflow-x-auto">
+                <div style={{ minWidth: narrow ? Math.max(360, daily.length * 56) : undefined }}>
               <ResponsiveContainer width="100%" height={320}>
                 <BarChart data={daily} barCategoryGap="22%" margin={{ top: 24, right: 8 }}>
                   <CartesianGrid strokeDasharray="2 6" stroke={C.grid} vertical={false} />
@@ -246,7 +249,7 @@ export default function DashboardPage() {
                     tick={axisTick}
                     axisLine={{ stroke: C.grid }}
                     tickLine={false}
-                    interval={narrow ? "preserveStartEnd" : 0}
+                    interval={0}
                   />
                   <YAxis tickFormatter={millTick} width={44} tick={axisTick} axisLine={false} tickLine={false} />
                   <Tooltip
@@ -257,20 +260,18 @@ export default function DashboardPage() {
                   />
                   <Legend wrapperStyle={{ color: "#cbd5e1", fontSize: 12 }} />
                   <Bar dataKey="작년" fill={C.slate} maxBarSize={26} radius={[4, 4, 0, 0]}>
-                    {!narrow && (
-                      <LabelList dataKey="작년" position="top" formatter={millLabel} fill="#94a3b8" fontSize={10} />
-                    )}
+                    <LabelList dataKey="작년" position="top" formatter={millLabel} fill="#94a3b8" fontSize={10} />
                   </Bar>
                   <Bar dataKey="올해" fill={C.blue} maxBarSize={26} radius={[4, 4, 0, 0]}>
                     {daily.map((_, i) => (
                       <Cell key={i} fill={i === peakIdx ? C.amber : C.blue} />
                     ))}
-                    {!narrow && (
-                      <LabelList dataKey="올해" position="top" formatter={millLabel} fill="#e0f2fe" fontSize={10} />
-                    )}
+                    <LabelList dataKey="올해" position="top" formatter={millLabel} fill="#e0f2fe" fontSize={10} />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
+                </div>
+              </div>
             )}
           </div>
 
@@ -282,6 +283,8 @@ export default function DashboardPage() {
               </h2>
               <span className="text-[11px] text-slate-400">단위: 백만원</span>
             </div>
+            <div className="overflow-x-auto">
+              <div style={{ minWidth: narrow ? 720 : undefined }}>
             <ResponsiveContainer width="100%" height={320}>
               <LineChart data={monthly} margin={{ top: 26, right: 14, bottom: 6 }}>
                 <CartesianGrid strokeDasharray="2 6" stroke={C.grid} vertical={false} />
@@ -303,9 +306,7 @@ export default function DashboardPage() {
                   dot={{ r: 2 }}
                   activeDot={{ r: 5 }}
                 >
-                  {!narrow && (
-                    <LabelList dataKey="작년" position="bottom" formatter={millLabel} fill="#94a3b8" fontSize={10} />
-                  )}
+                  <LabelList dataKey="작년" position="bottom" formatter={millLabel} fill="#94a3b8" fontSize={10} />
                 </Line>
                 <Line
                   type="monotone"
@@ -315,12 +316,12 @@ export default function DashboardPage() {
                   dot={{ r: 3 }}
                   activeDot={{ r: 6 }}
                 >
-                  {!narrow && (
-                    <LabelList dataKey="올해" position="top" formatter={millLabel} fill="#e0f2fe" fontSize={10} />
-                  )}
+                  <LabelList dataKey="올해" position="top" formatter={millLabel} fill="#e0f2fe" fontSize={10} />
                 </Line>
               </LineChart>
             </ResponsiveContainer>
+              </div>
+            </div>
           </div>
         </>
       )}
