@@ -1,5 +1,7 @@
 "use client";
 
+import { todayKST } from "@/lib/types";
+
 export default function DateBar({
   date,
   setDate,
@@ -28,7 +30,7 @@ export default function DateBar({
       <button className="btn-ghost" onClick={() => shift(1)}>
         다음 ▶
       </button>
-      <button className="btn-ghost" onClick={() => setDate(new Date().toISOString().slice(0, 10))}>
+      <button className="btn-ghost" onClick={() => setDate(todayKST())}>
         오늘
       </button>
       <div className="ml-auto flex items-center gap-2">{children}</div>
