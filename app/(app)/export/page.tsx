@@ -11,6 +11,7 @@ import {
   listExportByMonth,
   upsertExport,
   deleteExport,
+  serverToday,
 } from "@/lib/actions";
 
 type Customer = { id: number; name: string };
@@ -44,10 +45,12 @@ type Form = typeof blank;
 export default function ExportPage() {
   const [month, setMonth] = useState(() => monthKST());
 
-  // 대시보드에서 넘어온 월(?month=YYYY-MM)로 열기
+  // 대시보드에서 넘어온 월(?month=YYYY-MM)로 열기.
+  // 없으면 서버 시각(한국시간) 기준 이번 달로 맞춘다.
   useEffect(() => {
     const q = new URLSearchParams(window.location.search).get("month");
     if (q && /^\d{4}-\d{2}$/.test(q)) setMonth(q);
+    else serverToday().then((d) => d && setMonth(d.slice(0, 7))).catch(() => {});
   }, []);
   const [rows, setRows] = useState<any[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
