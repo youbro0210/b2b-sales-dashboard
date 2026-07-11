@@ -244,10 +244,10 @@ export default function DashboardPage() {
           {/* 선택 월 KPI — 모바일 2열에서 줄이 맞도록 총매출을 2칸 차지시킨다 */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
             <Kpi title="총 매출 (선택 월)" value={eok(totalSales)} accent span2 />
-            <Kpi title="B2B 매출" value={eok(b2bSales)} href="/b2b" />
-            <Kpi title="수출 매출" value={eok(expSales)} href="/export" />
-            <Kpi title="마트/온라인/특정" value={eok(loadSales)} href="/loading" />
-            <Kpi title="B2B 매출이익" value={eok(b2bProfit)} href="/b2b" />
+            <Kpi title="B2B 매출" value={eok(b2bSales)} href={`/b2b?date=${todayStr}`} />
+            <Kpi title="수출 매출" value={eok(expSales)} href={`/export?month=${month}`} />
+            <Kpi title="마트/온라인/특정" value={eok(loadSales)} href={`/loading?date=${todayStr}`} />
+            <Kpi title="B2B 매출이익" value={eok(b2bProfit)} href={`/b2b?date=${todayStr}`} />
           </div>
 
           {/* 오늘 매출 — 총매출 라인 바로 밑, 앰버 톤으로 구분 */}
@@ -263,9 +263,24 @@ export default function DashboardPage() {
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <Today title="총 매출" value={todayStats.cur.total} prev={todayStats.prev.total} accent />
-              <Today title="B2B 매출" value={todayStats.cur.b2b} prev={todayStats.prev.b2b} />
-              <Today title="수출 매출" value={todayStats.cur.exp} prev={todayStats.prev.exp} />
-              <Today title="마트/온라인/특정" value={todayStats.cur.load} prev={todayStats.prev.load} />
+              <Today
+                title="B2B 매출"
+                value={todayStats.cur.b2b}
+                prev={todayStats.prev.b2b}
+                href={`/b2b?date=${todayStr}`}
+              />
+              <Today
+                title="수출 매출"
+                value={todayStats.cur.exp}
+                prev={todayStats.prev.exp}
+                href={`/export?month=${todayStr.slice(0, 7)}`}
+              />
+              <Today
+                title="마트/온라인/특정"
+                value={todayStats.cur.load}
+                prev={todayStats.prev.load}
+                href={`/loading?date=${todayStr}`}
+              />
             </div>
           </div>
 
@@ -378,19 +393,23 @@ function Today({
   value,
   prev,
   accent,
+  href,
 }: {
   title: string;
   value: number;
   prev: number;
   accent?: boolean;
+  href?: string;
 }) {
   const diff = prev > 0 ? ((value - prev) / prev) * 100 : null;
   const up = (diff ?? 0) >= 0;
+  const Wrap: any = href ? Link : "div";
   return (
-    <div
-      className={`rounded-xl border p-4 ${
-        accent ? "border-transparent" : "border-teal-200 bg-white"
-      }`}
+    <Wrap
+      {...(href ? { href } : {})}
+      className={`rounded-xl border p-4 block ${
+        href ? "transition hover:-translate-y-0.5 hover:shadow-md cursor-pointer" : ""
+      } ${accent ? "border-transparent" : "border-teal-200 bg-white"}`}
       style={
         accent
           ? { background: "linear-gradient(135deg,#0D9488 0%,#115E59 100%)" }
@@ -419,7 +438,7 @@ function Today({
           </span>
         )}
       </div>
-    </div>
+    </Wrap>
   );
 }
 
