@@ -198,40 +198,40 @@ export default function ExcelBox({
   };
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
-      <button className="btn-ghost" onClick={downloadTemplate}>
+    <div className="flex items-center gap-2 flex-nowrap overflow-x-auto whitespace-nowrap">
+      <button className="btn-ghost shrink-0" onClick={downloadTemplate}>
         📄 양식 다운로드
       </button>
       <button
-        className="btn-ghost"
+        className="btn-ghost shrink-0"
         onClick={() => fileRef.current?.click()}
         disabled={busy}
       >
         {busy ? "업로드 중..." : "⬆ 엑셀 업로드"}
       </button>
       {getExport && (
-        <button className="btn-ghost" onClick={downloadData}>
+        <button className="btn-ghost shrink-0" onClick={downloadData}>
           ⬇ 데이터 다운로드
         </button>
       )}
       {getRangeExport && (
-        <span className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-xs text-slate-400 ml-1">|</span>
-          <span className="text-xs text-slate-500">기간</span>
+        <span className="flex items-center gap-1.5 flex-nowrap shrink-0">
+          <span className="text-slate-300 px-0.5">|</span>
+          <span className="text-xs text-slate-500 shrink-0">기간</span>
           <input
             type="date"
-            className="input !py-1 !text-xs max-w-[140px]"
+            className="input !py-1 !px-2 !text-xs w-[130px] shrink-0"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
           />
-          <span className="text-xs text-slate-500">~</span>
+          <span className="text-xs text-slate-500 shrink-0">~</span>
           <input
             type="date"
-            className="input !py-1 !text-xs max-w-[140px]"
+            className="input !py-1 !px-2 !text-xs w-[130px] shrink-0"
             value={to}
             onChange={(e) => setTo(e.target.value)}
           />
-          <button className="btn-ghost" onClick={downloadRange} disabled={busy}>
+          <button className="btn-ghost shrink-0" onClick={downloadRange} disabled={busy}>
             {busy ? "처리 중..." : "⬇ 기간 다운로드"}
           </button>
         </span>
