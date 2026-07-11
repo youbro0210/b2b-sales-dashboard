@@ -4,10 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import DateBar from "@/components/DateBar";
 import ExcelBox from "@/components/ExcelBox";
 import NumberInput from "@/components/NumberInput";
-import { fmt } from "@/lib/types";
+import { fmt, ymd } from "@/lib/types";
 import {
   listCustomers,
   listB2bByDate,
+  listB2bRange,
   saveB2b,
   deleteB2b,
 } from "@/lib/actions";
@@ -146,6 +147,26 @@ export default function B2bPage() {
               r.note,
             ]),
           ]}
+          rangeExportName={(f, t) => `B2B매출_${f}_${t}.xlsx`}
+          getRangeExport={async (f, t) => {
+            const data = (await listB2bRange(f, t)) as any[];
+            return [
+              ["일자", "고객사명", "제조원가", "매출액", "매출이익액", "이익율(%)", "비고"],
+              ...data.map((r) => {
+                const sales = num(r.sales_amount);
+                const profit = num(r.profit_amount);
+                return [
+                  ymd(r.sale_date),
+                  r.customer_name ?? "",
+                  num(r.mfg_cost),
+                  sales,
+                  profit,
+                  sales ? Number(((profit / sales) * 100).toFixed(1)) : 0,
+                  r.note ?? "",
+                ];
+              }),
+            ];
+          }}
         />
       </div>
 
