@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import InstallPWA from "@/components/InstallPWA";
 
 export const metadata: Metadata = {
   title: "은하수산 매출관리 시스템",
@@ -32,7 +33,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body>{children}</body>
+      <body>
+        {children}
+        <InstallPWA />
+      </body>
     </html>
   );
 }
