@@ -31,6 +31,12 @@ const millTick = (v: number) => (v / 1e6).toLocaleString("ko-KR", { maximumFract
 const millTip = (v: number) => (v / 1e6).toLocaleString("ko-KR", { maximumFractionDigits: 2 }) + " 백만원";
 const millLabel = (v: any) =>
   Number(v) ? (Number(v) / 1e6).toLocaleString("ko-KR", { maximumFractionDigits: 1 }) : "";
+// 오늘 매출 카드: 백만원 단위 (소수점 1자리)
+const mill = (v: number) =>
+  (Number(v || 0) / 1e6).toLocaleString("ko-KR", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
 // 날짜를 Date 객체/문자열 어느 쪽이든 "YYYY-MM-DD"로 정규화 (date 컬럼은 시간대 없음 → UTC 사용)
 const ymd = (d: any): string => {
   if (!d) return "";
@@ -247,15 +253,15 @@ export default function DashboardPage() {
           </div>
 
           {/* 오늘 매출 — 총매출 라인 바로 밑, 앰버 톤으로 구분 */}
-          <div className="card !bg-amber-50 !border-amber-200">
+          <div className="card !bg-teal-50 !border-teal-200">
             <div className="flex items-start justify-between gap-2 mb-3 flex-wrap">
               <div>
-                <h2 className="font-semibold text-amber-900">오늘 매출</h2>
-                <p className="text-[11px] text-amber-700/70 mt-0.5">
+                <h2 className="font-semibold text-teal-900">오늘 매출</h2>
+                <p className="text-[11px] text-teal-700/70 mt-0.5">
                   {todayStr} · 작년 같은 날({lastYearTodayStr}) 대비
                 </p>
               </div>
-              <span className="text-[11px] text-amber-700/70">단위: 원</span>
+              <span className="text-[11px] text-teal-700/70">단위: 백만원</span>
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <Today title="총 매출" value={todayStats.cur.total} prev={todayStats.prev.total} accent />
@@ -385,17 +391,17 @@ function Today({
   return (
     <div
       className={`rounded-xl border p-4 ${
-        accent ? "border-transparent" : "border-amber-200 bg-white"
+        accent ? "border-transparent" : "border-teal-200 bg-white"
       }`}
       style={
         accent
-          ? { background: "linear-gradient(135deg,#f59e0b 0%,#b45309 100%)" }
+          ? { background: "linear-gradient(135deg,#0D9488 0%,#115E59 100%)" }
           : undefined
       }
     >
       <div
         className="text-[11px] leading-tight"
-        style={{ color: accent ? "#fef3c7" : "#92400e" }}
+        style={{ color: accent ? "#ccfbf1" : "#0F766E" }}
       >
         {title}
       </div>
@@ -403,15 +409,15 @@ function Today({
         className="mt-1.5 text-base sm:text-lg font-bold tabular-nums leading-tight break-keep"
         style={{ color: accent ? "#ffffff" : "#0f172a" }}
       >
-        {won(value, 0)}
+        {mill(value)}
       </div>
       <div className="mt-1 text-[11px] tabular-nums">
         {diff === null ? (
-          <span style={{ color: accent ? "#fde68a" : "#a8a29e" }}>작년 기록 없음</span>
+          <span style={{ color: accent ? "#99f6e4" : "#94a3b8" }}>작년 기록 없음</span>
         ) : (
-          <span style={{ color: accent ? "#fef3c7" : up ? "#16a34a" : "#dc2626" }}>
+          <span style={{ color: accent ? "#ccfbf1" : up ? "#16a34a" : "#dc2626" }}>
             {up ? "▲" : "▼"} {Math.abs(diff).toFixed(1)}%{" "}
-            <span style={{ color: accent ? "#fde68a" : "#a8a29e" }}>vs 작년</span>
+            <span style={{ color: accent ? "#99f6e4" : "#94a3b8" }}>vs 작년</span>
           </span>
         )}
       </div>
