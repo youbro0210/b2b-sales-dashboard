@@ -138,7 +138,7 @@ export default function ExcelBox({
       const ws = wb.Sheets[wb.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json<any>(ws, { defval: "" });
 
-      let res: { ok: boolean; count: number; error?: string };
+      let res: { ok: boolean; count: number; error?: string; skipped?: string[] };
       if (kind === "b2b") {
         const rows = json
           .map((r) => ({
@@ -185,7 +185,13 @@ export default function ExcelBox({
       }
 
       if (res.ok) {
-        setMsg(`${res.count}건 업로드 완료`);
+        const skipped = res.skipped ?? [];
+        setMsg(
+          `${res.count}건 업로드 완료` +
+            (skipped.length
+              ? ` · 기준정보에 없는 채널 ${skipped.length}개 제외 (${skipped.join(", ")})`
+              : "")
+        );
         onDone?.();
       } else {
         setMsg("실패: " + (res.error ?? ""));
