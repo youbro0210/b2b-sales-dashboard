@@ -44,7 +44,9 @@ export default function Sidebar({
         className="md:hidden flex items-center justify-between text-white px-4 py-3 sticky top-0 z-30"
         style={oceanBg}
       >
-        <span className="font-bold tracking-wide">🌊 은하수산</span>
+        <Link href="/dashboard" className="font-bold tracking-wide">
+          🌊 은하수산
+        </Link>
         <button onClick={() => setOpen(true)} aria-label="메뉴 열기" className="text-2xl leading-none">
           ☰
         </button>
@@ -65,14 +67,14 @@ export default function Sidebar({
         style={oceanBg}
       >
         <div className="px-5 py-5 border-b border-white/10 flex items-center justify-between">
-          <div>
+          <Link href="/dashboard" onClick={() => setOpen(false)} className="block">
             <div className="text-lg font-bold tracking-wide flex items-center gap-1.5">
               <span>🌊</span> 은하수산
             </div>
             <div className="text-[11px] text-sky-200/80 mt-1 tracking-wide">
               매출관리 시스템 · Since 1970
             </div>
-          </div>
+          </Link>
           <button
             onClick={() => setOpen(false)}
             className="md:hidden text-slate-300 text-xl"
