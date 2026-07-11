@@ -5,7 +5,13 @@ import DateBar from "@/components/DateBar";
 import ExcelBox from "@/components/ExcelBox";
 import NumberInput from "@/components/NumberInput";
 import { fmt } from "@/lib/types";
-import { listChannels, listLoadingByDate, saveLoading } from "@/lib/actions";
+import {
+  listChannels,
+  listLoadingByDate,
+  saveLoading,
+  countLoadingRange,
+  deleteLoadingRange,
+} from "@/lib/actions";
 
 type Channel = { id: number; group_name: string | null; name: string; sort_order: number };
 const num = (v: any) => Number(v ?? 0);
@@ -44,6 +50,39 @@ export default function LoadingPage() {
   const [values, setValues] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // 잘못 업로드한 데이터 기간 삭제
+  const today = new Date().toISOString().slice(0, 10);
+  const [delFrom, setDelFrom] = useState(today);
+  const [delTo, setDelTo] = useState(today);
+  const [deleting, setDeleting] = useState(false);
+  const [delMsg, setDelMsg] = useState<string | null>(null);
+
+  const removeRange = async () => {
+    setDelMsg(null);
+    if (delFrom > delTo) {
+      setDelMsg("시작일이 종료일보다 늦습니다.");
+      return;
+    }
+    setDeleting(true);
+    try {
+      const n = await countLoadingRange(delFrom, delTo);
+      if (!n) {
+        setDelMsg(`${delFrom} ~ ${delTo} 기간에 저장된 데이터가 없습니다.`);
+      } else if (
+        confirm(
+          `${delFrom} ~ ${delTo} 기간의 상차 데이터 ${n}건을 삭제합니다.\n삭제하면 되돌릴 수 없습니다. 진행할까요?`
+        )
+      ) {
+        await deleteLoadingRange(delFrom, delTo);
+        setDelMsg(`${n}건 삭제 완료`);
+        fetchValues();
+      }
+    } catch (e: any) {
+      setDelMsg("삭제 오류: " + (e?.message ?? ""));
+    }
+    setDeleting(false);
+  };
 
   useEffect(() => {
     listChannels().then((d) => setChannels(d as Channel[]));
@@ -156,6 +195,38 @@ export default function LoadingPage() {
             ),
           ]}
         />
+      </div>
+
+      <div className="card">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-medium text-slate-600">
+            🗑 잘못 올린 데이터 삭제
+          </span>
+          <input
+            type="date"
+            className="input !py-1 !px-2 !text-xs w-[130px]"
+            value={delFrom}
+            onChange={(e) => setDelFrom(e.target.value)}
+          />
+          <span className="text-xs text-slate-500">~</span>
+          <input
+            type="date"
+            className="input !py-1 !px-2 !text-xs w-[130px]"
+            value={delTo}
+            onChange={(e) => setDelTo(e.target.value)}
+          />
+          <button
+            className="btn bg-red-50 text-red-600 hover:bg-red-100"
+            onClick={removeRange}
+            disabled={deleting}
+          >
+            {deleting ? "처리 중..." : "기간 삭제"}
+          </button>
+          {delMsg && <span className="text-xs text-slate-600">{delMsg}</span>}
+        </div>
+        <p className="text-[11px] text-slate-400 mt-2">
+          선택한 기간의 상차 데이터를 모두 삭제합니다. 삭제 전 건수를 확인시켜 드리며, 되돌릴 수 없습니다.
+        </p>
       </div>
 
       <div className="card overflow-x-auto">
