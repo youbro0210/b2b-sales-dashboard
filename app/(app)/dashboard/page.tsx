@@ -19,6 +19,12 @@ import { dashboardData } from "@/lib/actions";
 import { fmt } from "@/lib/types";
 
 const won = (v: number, decimals = 2) => fmt(v, decimals);
+// KPI 카드: 억원 단위 (소수점 2자리)
+const eok = (v: number) =>
+  (Number(v || 0) / 1e8).toLocaleString("ko-KR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 // 백만원 단위 축/툴팁/막대 상단 라벨
 const millTick = (v: number) => (v / 1e6).toLocaleString("ko-KR", { maximumFractionDigits: 0 });
 const millTip = (v: number) => (v / 1e6).toLocaleString("ko-KR", { maximumFractionDigits: 2 }) + " 백만원";
@@ -180,7 +186,7 @@ export default function DashboardPage() {
               <option key={m} value={m}>{m}</option>
             ))}
           </select>
-          <span className="text-[11px] text-slate-400 mt-1 mr-1">단위: 원</span>
+          <span className="text-[11px] text-slate-400 mt-1 mr-1">단위: 억원</span>
         </div>
       </div>
 
@@ -189,11 +195,11 @@ export default function DashboardPage() {
       ) : (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
-            <Kpi title="총 매출 (선택 월)" value={won(totalSales)} accent />
-            <Kpi title="B2B 매출" value={won(b2bSales)} href="/b2b" />
-            <Kpi title="수출 매출" value={won(expSales)} href="/export" />
-            <Kpi title="마트/온라인/특정" value={won(loadSales)} href="/loading" />
-            <Kpi title="B2B 매출이익" value={won(b2bProfit)} href="/b2b" />
+            <Kpi title="총 매출 (선택 월)" value={eok(totalSales)} accent />
+            <Kpi title="B2B 매출" value={eok(b2bSales)} href="/b2b" />
+            <Kpi title="수출 매출" value={eok(expSales)} href="/export" />
+            <Kpi title="마트/온라인/특정" value={eok(loadSales)} href="/loading" />
+            <Kpi title="B2B 매출이익" value={eok(b2bProfit)} href="/b2b" />
           </div>
 
           <div className="card" style={panelStyle}>
