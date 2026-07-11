@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import DateBar from "@/components/DateBar";
 import ExcelBox from "@/components/ExcelBox";
 import NumberInput from "@/components/NumberInput";
-import { fmt, ymd } from "@/lib/types";
+import { fmt, ymd, todayKST } from "@/lib/types";
 import {
   listCustomers,
   listB2bByDate,
@@ -28,7 +28,7 @@ type Row = {
 const num = (v: any) => Number(v ?? 0);
 
 export default function B2bPage() {
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => todayKST());
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
