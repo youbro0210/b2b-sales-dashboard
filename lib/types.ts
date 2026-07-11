@@ -86,3 +86,16 @@ export const ymd = (d: unknown): string => {
   const dt = new Date(s);
   return isNaN(dt.getTime()) ? "" : dt.toISOString().slice(0, 10);
 };
+
+// 오늘 날짜 (한국시간 기준). toISOString() 은 UTC라서 KST 오전 9시 이전에는
+// 하루 전 날짜가 나오므로, 반드시 이 함수를 쓴다.
+export const todayKST = (): string =>
+  new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+
+// 이번 달 (한국시간 기준) "YYYY-MM"
+export const monthKST = (): string => todayKST().slice(0, 7);
