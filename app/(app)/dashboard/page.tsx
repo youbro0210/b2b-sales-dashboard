@@ -16,7 +16,7 @@ import {
   LabelList,
   Cell,
 } from "recharts";
-import { dashboardData } from "@/lib/actions";
+import { dashboardData, serverToday } from "@/lib/actions";
 import { fmt, todayKST, monthKST } from "@/lib/types";
 
 const won = (v: number, decimals = 2) => fmt(v, decimals);
@@ -186,8 +186,19 @@ export default function DashboardPage() {
     return out;
   }, [totalByMonth, year, prevYear]);
 
-  // 오늘(현재일) 매출 — 구분별 + 작년 같은 날 대비
-  const todayStr = todayKST();
+  // 오늘(현재일) 매출 — 서버 시각(한국시간) 기준. 기기 시계가 틀려도 정확하다.
+  const [todayStr, setTodayStr] = useState<string>(() => todayKST());
+  useEffect(() => {
+    serverToday()
+      .then((d) => {
+        if (d) {
+          setTodayStr(d);
+          setMonth((m) => (m === monthKST() ? d.slice(0, 7) : m));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const lastYearTodayStr = `${Number(todayStr.slice(0, 4)) - 1}${todayStr.slice(4)}`;
 
   const todayStats = useMemo(() => {
