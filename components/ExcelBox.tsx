@@ -56,22 +56,62 @@ export default function ExcelBox({
   onDone,
   getExport,
   exportName,
+  getTemplateRows,
+  getRangeExport,
+  rangeExportName,
 }: {
   kind: Kind;
   onDone?: () => void;
   getExport?: () => any[][];
   exportName?: string;
+  // 양식 다운로드 시 예시 1줄 대신 미리 채워진 행들을 내려줌 (예: 전체 채널)
+  getTemplateRows?: () => any[][];
+  // 기간 데이터 다운로드 (시작일~종료일)
+  getRangeExport?: (from: string, to: string) => Promise<any[][]>;
+  rangeExportName?: (from: string, to: string) => string;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const today = new Date().toISOString().slice(0, 10);
+  const [from, setFrom] = useState(today.slice(0, 8) + "01");
+  const [to, setTo] = useState(today);
 
   const downloadTemplate = () => {
     const t = TEMPLATES[kind];
-    const ws = XLSX.utils.aoa_to_sheet([t.headers, t.example]);
+    const rows = getTemplateRows ? getTemplateRows() : [t.example];
+    const ws = XLSX.utils.aoa_to_sheet([t.headers, ...rows]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "양식");
     XLSX.writeFile(wb, t.file);
+  };
+
+  const downloadRange = async () => {
+    if (!getRangeExport) return;
+    if (from > to) {
+      setMsg("시작일이 종료일보다 늦습니다.");
+      return;
+    }
+    setBusy(true);
+    setMsg(null);
+    try {
+      const aoa = await getRangeExport(from, to);
+      if (!aoa || aoa.length <= 1) {
+        setMsg("해당 기간에 데이터가 없습니다.");
+      } else {
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "데이터");
+        XLSX.writeFile(
+          wb,
+          rangeExportName ? rangeExportName(from, to) : `데이터_${from}_${to}.xlsx`
+        );
+        setMsg(`${aoa.length - 1}건 다운로드`);
+      }
+    } catch (err: any) {
+      setMsg("다운로드 오류: " + (err?.message ?? ""));
+    }
+    setBusy(false);
   };
 
   const downloadData = () => {
@@ -173,6 +213,28 @@ export default function ExcelBox({
         <button className="btn-ghost" onClick={downloadData}>
           ⬇ 데이터 다운로드
         </button>
+      )}
+      {getRangeExport && (
+        <span className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-xs text-slate-400 ml-1">|</span>
+          <span className="text-xs text-slate-500">기간</span>
+          <input
+            type="date"
+            className="input !py-1 !text-xs max-w-[140px]"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+          />
+          <span className="text-xs text-slate-500">~</span>
+          <input
+            type="date"
+            className="input !py-1 !text-xs max-w-[140px]"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+          />
+          <button className="btn-ghost" onClick={downloadRange} disabled={busy}>
+            {busy ? "처리 중..." : "⬇ 기간 다운로드"}
+          </button>
+        </span>
       )}
       <input
         ref={fileRef}
