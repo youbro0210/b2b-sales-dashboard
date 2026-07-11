@@ -223,6 +223,14 @@ export async function listB2bByDate(date: string) {
   return await sql`select * from b2b_sales where sale_date = ${date} order by id`;
 }
 
+// 기간(시작일~종료일) B2B 매출 조회 — 엑셀 기간 다운로드용
+export async function listB2bRange(from: string, to: string) {
+  await requireUser();
+  return await sql`select * from b2b_sales
+                   where sale_date >= ${from} and sale_date <= ${to}
+                   order by sale_date, id`;
+}
+
 export async function saveB2b(
   date: string,
   rows: {
