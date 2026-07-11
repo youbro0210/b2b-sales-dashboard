@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import { bulkSaveB2b, bulkSaveLoading, bulkSaveExport } from "@/lib/actions";
+import { todayKST } from "@/lib/types";
 
 type Kind = "b2b" | "loading" | "export";
 
@@ -73,7 +74,7 @@ export default function ExcelBox({
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayKST();
   const [from, setFrom] = useState(today.slice(0, 8) + "01");
   const [to, setTo] = useState(today);
 
