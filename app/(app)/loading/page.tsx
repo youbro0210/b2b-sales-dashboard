@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import DateBar from "@/components/DateBar";
 import ExcelBox from "@/components/ExcelBox";
 import NumberInput from "@/components/NumberInput";
-import { fmt } from "@/lib/types";
+import { fmt, todayKST } from "@/lib/types";
 import {
   listChannels,
   listLoadingByDate,
@@ -45,14 +45,14 @@ const orderItems = (items: Channel[]): Channel[] => {
 };
 
 export default function LoadingPage() {
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => todayKST());
   const [channels, setChannels] = useState<Channel[]>([]);
   const [values, setValues] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   // 잘못 업로드한 데이터 기간 삭제
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayKST();
   const [delFrom, setDelFrom] = useState(today);
   const [delTo, setDelTo] = useState(today);
   const [deleting, setDeleting] = useState(false);
