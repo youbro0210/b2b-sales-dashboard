@@ -6,7 +6,7 @@ import { useState } from "react";
 import { signOut } from "@/lib/actions";
 
 const baseNav = [
-  { href: "/dashboard", label: "대시보드", icon: "📊" },
+  { href: "/dashboard", label: "대시보드", icon: "📊" },a
   { href: "/b2b", label: "B2B 매출", icon: "🏢" },
   { href: "/loading", label: "마트/온라인/특정", icon: "🚚" },
   { href: "/export", label: "수출대장", icon: "🌏" },
@@ -92,14 +92,27 @@ export default function Sidebar({
                 key={item.href}
                 href={item.href}
                 onClick={() => setOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition ${
+                aria-current={active ? "page" : undefined}
+                className={`relative flex items-center gap-3 pl-4 pr-3 py-2.5 rounded-lg text-sm transition ${
                   active
-                    ? "text-white font-medium shadow-sm"
-                    : "text-sky-100/80 hover:bg-white/10"
+                    ? "text-white font-bold"
+                    : "text-sky-100/75 hover:bg-white/10 hover:text-white"
                 }`}
-                style={active ? { background: "#0184CA" } : undefined}
+                style={
+                  active
+                    ? {
+                        background:
+                          "linear-gradient(90deg,#0184CA 0%,#0EA5E9 100%)",
+                        boxShadow: "0 2px 12px rgba(14,165,233,0.45)",
+                      }
+                    : undefined
+                }
               >
-                <span>{item.icon}</span>
+                {/* 선택된 메뉴 왼쪽 흰색 인디케이터 */}
+                {active && (
+                  <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-white" />
+                )}
+                <span className={active ? "" : "opacity-80"}>{item.icon}</span>
                 {item.label}
               </Link>
             );
