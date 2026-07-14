@@ -72,6 +72,12 @@ const axisTick = { fill: C.axis, fontSize: 11 } as const;
 
 type Any = Record<string, any>;
 
+// 상차 채널 '구분' → 메뉴 매핑 (마트/온라인/특정 메뉴와 동일 기준)
+const G_MART = ["오프라인", "롯데마트_수수료업체", "이마트_수수료업체"];
+const G_ONLINE = ["온라인"];
+const G_SPECIAL = ["특정"];
+const inGroup = (r: Any, gs: string[]) => gs.includes(String(r.group_name ?? ""));
+
 export default function DashboardPage() {
   const [b2b, setB2b] = useState<Any[]>([]);
   const [exp, setExp] = useState<Any[]>([]);
@@ -117,9 +123,19 @@ export default function DashboardPage() {
   const b2bProfit = b2bMonth.reduce((s, r) => s + num(r.profit_amount), 0);
   const expSales = expMonth.reduce((s, r) => s + num(r.sales_total), 0);
   const loadSales = loadMonth.reduce((s, r) => s + num(r.supply_amount), 0);
+  // 마트 / 온라인 / 특정 분리 집계
+  const martSales = loadMonth
+    .filter((r) => inGroup(r, G_MART))
+    .reduce((s, r) => s + num(r.supply_amount), 0);
+  const onlineSales = loadMonth
+    .filter((r) => inGroup(r, G_ONLINE))
+    .reduce((s, r) => s + num(r.supply_amount), 0);
+  const specialSales = loadMonth
+    .filter((r) => inGroup(r, G_SPECIAL))
+    .reduce((s, r) => s + num(r.supply_amount), 0);
   const totalSales = b2bSales + expSales + loadSales;
 
-  // 전체 매출(B2B + 수출 + 마트/온라인/특정)을 일자별로 합산
+  // 전체 매출(B2C 온라인 + 수출 + 마트/온라인/특정)을 일자별로 합산
   const totalByDate = useMemo(() => {
     const m: Record<string, number> = {};
     const add = (d: any, v: number) => {
@@ -216,11 +232,27 @@ export default function DashboardPage() {
         (s, r) => (ymd(r[dateField]) === d ? s + num(r[valField]) : s),
         0
       );
+    const sumGroup = (d: string, gs: string[]) =>
+      load.reduce(
+        (s, r) =>
+          ymd(r.load_date) === d && inGroup(r, gs)
+            ? s + num(r.supply_amount)
+            : s,
+        0
+      );
     const mk = (d: string) => {
       const b = sumOn(b2b, "sale_date", "sales_amount", d);
       const e = sumOn(exp, "delivery_date", "sales_total", d);
       const l = sumOn(load, "load_date", "supply_amount", d);
-      return { b2b: b, exp: e, load: l, total: b + e + l };
+      return {
+        b2b: b,
+        exp: e,
+        load: l,
+        mart: sumGroup(d, G_MART),
+        online: sumGroup(d, G_ONLINE),
+        special: sumGroup(d, G_SPECIAL),
+        total: b + e + l,
+      };
     };
     return { cur: mk(todayStr), prev: mk(lastYearTodayStr) };
   }, [b2b, exp, load, todayStr, lastYearTodayStr]);
@@ -261,12 +293,14 @@ export default function DashboardPage() {
       ) : (
         <>
           {/* 선택 월 KPI — 모바일 2열에서 줄이 맞도록 총매출을 2칸 차지시킨다 */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <Kpi title="총 매출 (선택 월)" value={eok(totalSales)} accent span2 />
-            <Kpi title="B2B 매출" value={eok(b2bSales)} href={`/b2b?date=${todayStr}`} />
+            <Kpi title="B2C 온라인" value={eok(b2bSales)} href={`/b2b?date=${todayStr}`} />
             <Kpi title="수출 매출" value={eok(expSales)} href={`/export?month=${month}`} />
-            <Kpi title="마트/온라인/특정" value={eok(loadSales)} href={`/loading?date=${todayStr}`} />
-            <Kpi title="B2B 매출이익" value={eok(b2bProfit)} href={`/b2b?date=${todayStr}`} />
+            <Kpi title="마트" value={eok(martSales)} href={`/loading?date=${todayStr}`} />
+            <Kpi title="온라인" value={eok(onlineSales)} href={`/online?date=${todayStr}`} />
+            <Kpi title="특정" value={eok(specialSales)} href={`/special?date=${todayStr}`} />
+            <Kpi title="B2C 매출이익" value={eok(b2bProfit)} href={`/b2b?date=${todayStr}`} />
           </div>
 
           {/* 오늘 매출 — 총매출 라인 바로 밑, 앰버 톤으로 구분 */}
@@ -280,10 +314,10 @@ export default function DashboardPage() {
               </div>
               <span className="text-[11px] text-teal-700/70">단위: 백만원</span>
             </div>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
               <Today title="총 매출" value={todayStats.cur.total} prev={todayStats.prev.total} accent />
               <Today
-                title="B2B 매출"
+                title="B2C 온라인"
                 value={todayStats.cur.b2b}
                 prev={todayStats.prev.b2b}
                 href={`/b2b?date=${todayStr}`}
@@ -295,10 +329,22 @@ export default function DashboardPage() {
                 href={`/export?month=${todayStr.slice(0, 7)}`}
               />
               <Today
-                title="마트/온라인/특정"
-                value={todayStats.cur.load}
-                prev={todayStats.prev.load}
+                title="마트"
+                value={todayStats.cur.mart}
+                prev={todayStats.prev.mart}
                 href={`/loading?date=${todayStr}`}
+              />
+              <Today
+                title="온라인"
+                value={todayStats.cur.online}
+                prev={todayStats.prev.online}
+                href={`/online?date=${todayStr}`}
+              />
+              <Today
+                title="특정"
+                value={todayStats.cur.special}
+                prev={todayStats.prev.special}
+                href={`/special?date=${todayStr}`}
               />
             </div>
           </div>
@@ -319,9 +365,9 @@ export default function DashboardPage() {
               <p className="text-sm text-slate-400">데이터가 없습니다.</p>
             ) : (
               <div className="w-full max-w-full overflow-x-auto">
-                <div style={{ minWidth: narrow ? Math.max(360, daily.length * 74) : undefined }}>
+                <div style={{ minWidth: narrow ? Math.max(360, daily.length * 62) : undefined }}>
               <ResponsiveContainer width="100%" height={320}>
-                <BarChart data={daily} barCategoryGap="22%" margin={{ top: 24, right: 8 }}>
+                <BarChart data={daily} barCategoryGap="8%" barGap={1} margin={{ top: 24, right: 8 }}>
                   <CartesianGrid strokeDasharray="2 6" stroke={C.grid} vertical={false} />
                   <XAxis
                     dataKey="day"
