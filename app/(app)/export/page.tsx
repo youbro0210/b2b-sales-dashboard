@@ -58,6 +58,8 @@ export default function ExportPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [form, setForm] = useState<Form>(blank);
   const [loading, setLoading] = useState(true);
+  // 일자별 조회 (비우면 해당 월 전체)
+  const [dateFilter, setDateFilter] = useState("");
 
   useEffect(() => {
     Promise.all([
@@ -140,9 +142,15 @@ export default function ExportPage() {
     fetchRows();
   };
 
+  // 화면에 보여줄 행 (일자 필터 적용)
+  const viewRows = useMemo(
+    () => (dateFilter ? rows.filter((r) => ymd(r.delivery_date) === dateFilter) : rows),
+    [rows, dateFilter]
+  );
+
   const total = useMemo(
-    () => rows.reduce((s, r) => s + num(r.sales_total), 0),
-    [rows]
+    () => viewRows.reduce((s, r) => s + num(r.sales_total), 0),
+    [viewRows]
   );
 
   // 엔화(일본) 매출은 소수 4자리, 그 외는 2자리
@@ -155,13 +163,29 @@ export default function ExportPage() {
           <h1 className="text-2xl font-bold">수출대장 입력</h1>
           <p className="text-sm text-slate-500">수출매출 현황 · 납기일 기준</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <input
             type="month"
-            className="input max-w-[160px]"
+            className="input max-w-[150px]"
             value={month}
             onChange={(e) => setMonth(e.target.value)}
           />
+          <span className="text-xs text-slate-400">일자</span>
+          <input
+            type="date"
+            className="input max-w-[150px]"
+            value={dateFilter}
+            min={`${month}-01`}
+            onChange={(e) => setDateFilter(e.target.value)}
+          />
+          {dateFilter && (
+            <button
+              className="btn-ghost whitespace-nowrap"
+              onClick={() => setDateFilter("")}
+            >
+              전체
+            </button>
+          )}
           <button className="btn-ghost whitespace-nowrap" onClick={fetchRows} disabled={loading}>
             {loading ? "조회 중..." : "🔍 조회"}
           </button>
@@ -172,14 +196,14 @@ export default function ExportPage() {
         <ExcelBox
           kind="export"
           onDone={fetchRows}
-          exportName={`수출대장_${month}.xlsx`}
+          exportName={`수출대장_${dateFilter || month}.xlsx`}
           getExport={() => [
-            ["납기일", "공급구분", "고객사명", "수출국가", "ERP CODE", "품명", "단위",
+            ["납기일", "공급구분", "고객사명", "수출국가", "품명", "단위",
              "매출액/단위", "수량(단위)", "수량(박스)", "매출 계", "제조원가 계", "물류비",
              "환율", "대분류", "정부지원사업"],
-            ...rows.map((r) => [
+            ...viewRows.map((r) => [
               ymd(r.delivery_date),
-              r.supply_type, r.customer_name, r.country_name, r.erp_code,
+              r.supply_type, r.customer_name, r.country_name,
               r.product_name, r.unit, num(r.sales_per_unit), num(r.qty_unit),
               num(r.qty_box), num(r.sales_total), num(r.mfg_cost_total),
               num(r.logistics_cost), num(r.exchange_rate), r.category, r.gov_support,
@@ -222,7 +246,7 @@ export default function ExportPage() {
               {countries.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </Field>
-          <Field label="품명 (ERP)">
+          <Field label="품명">
             <select className="input" value={form.product_name}
               onChange={(e) => {
                 const p = products.find((x) => x.name === e.target.value);
@@ -232,7 +256,6 @@ export default function ExportPage() {
               {products.map((p) => <option key={p.id} value={p.name}>{p.name}</option>)}
             </select>
           </Field>
-          <Field label="ERP CODE"><input className="input" value={form.erp_code} onChange={(e) => set({ erp_code: e.target.value })} /></Field>
           <Field label="단위"><input className="input" value={form.unit} onChange={(e) => set({ unit: e.target.value })} /></Field>
           <Field label="대분류"><input className="input" value={form.category} onChange={(e) => set({ category: e.target.value })} /></Field>
           <Field label={`매출액/단위 ${amtDp === 4 ? "(엔화·소수4자리)" : "(소수2자리)"}`}><Num value={form.sales_per_unit} decimals={amtDp} onChange={(v) => set({ sales_per_unit: v, sales_total: v * num(form.qty_unit) })} /></Field>
@@ -252,7 +275,7 @@ export default function ExportPage() {
 
       <div className="card overflow-x-auto">
         <div className="flex justify-between mb-3">
-          <h2 className="font-semibold">{month} 수출 내역 ({rows.length}건)</h2>
+          <h2 className="font-semibold">{dateFilter || month} 수출 내역 ({viewRows.length}건)</h2>
           <span className="text-sm text-slate-500">매출 합계 <b>{fmt(total)}</b> 원</span>
         </div>
         {loading ? (
@@ -262,22 +285,21 @@ export default function ExportPage() {
             <thead>
               <tr>
                 <th>납기일</th><th>구분</th><th>고객사</th><th>국가</th>
-                <th>ERP</th><th>품명</th><th className="text-right">수량(단위)</th>
+                <th>품명</th><th className="text-right">수량(단위)</th>
                 <th className="text-right">매출 계</th><th className="text-right">원가 계</th>
                 <th className="text-right">환율</th><th></th>
               </tr>
             </thead>
             <tbody>
-              {rows.length === 0 && (
-                <tr><td colSpan={11} className="text-center text-slate-400 py-6">데이터가 없습니다.</td></tr>
+              {viewRows.length === 0 && (
+                <tr><td colSpan={10} className="text-center text-slate-400 py-6">데이터가 없습니다.</td></tr>
               )}
-              {rows.map((r) => (
+              {viewRows.map((r) => (
                 <tr key={r.id} className="cursor-pointer" onClick={() => edit(r)}>
                   <td>{ymd(r.delivery_date)}</td>
                   <td>{r.supply_type}</td>
                   <td>{r.customer_name}</td>
                   <td>{r.country_name}</td>
-                  <td className="text-xs text-slate-500">{r.erp_code}</td>
                   <td>{r.product_name}</td>
                   <td className="text-right">{fmtInt(num(r.qty_unit))}</td>
                   <td className="text-right">{fmt(num(r.sales_total), r.country_name === "일본" ? 4 : 2)}</td>
