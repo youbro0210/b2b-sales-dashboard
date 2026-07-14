@@ -9,7 +9,7 @@ type Kind = "b2b" | "loading" | "export";
 
 const TEMPLATES: Record<Kind, { file: string; headers: string[]; example: any[] }> = {
   b2b: {
-    file: "B2B매출_업로드양식.xlsx",
+    file: "B2C온라인_업로드양식.xlsx",
     headers: ["일자", "고객사명", "제조원가", "매출액", "매출이익액", "비고"],
     example: ["2026-06-01", "(주)푸디슨", 100000, 150000, 50000, ""],
   },
@@ -21,12 +21,12 @@ const TEMPLATES: Record<Kind, { file: string; headers: string[]; example: any[] 
   export: {
     file: "수출대장_업로드양식.xlsx",
     headers: [
-      "납기일", "공급구분", "고객사명", "수출국가", "ERP CODE", "품명", "단위",
+      "납기일", "공급구분", "고객사명", "수출국가", "품명", "단위",
       "매출액/단위", "수량(단위)", "수량(박스)", "매출 계", "제조원가 계", "물류비",
       "환율", "대분류", "정부지원사업",
     ],
     example: [
-      "2026-06-08", "직접", "울타리", "미국", "A001GA0411000003", "(냉동)광어회 밀키트",
+      "2026-06-08", "직접", "울타리", "미국", "(냉동)광어회 밀키트",
       "354", 5000, 100, 10, 500000, 300000, 20000, 1350, "밀키트", "",
     ],
   },
@@ -168,7 +168,6 @@ export default function ExcelBox({
             supply_type: String(r["공급구분"] ?? "").trim() || null,
             customer_name: String(r["고객사명"] ?? "").trim() || null,
             country_name: String(r["수출국가"] ?? "").trim() || null,
-            erp_code: String(r["ERP CODE"] ?? "").trim() || null,
             product_name: String(r["품명"] ?? "").trim() || null,
             unit: String(r["단위"] ?? "").trim() || null,
             sales_per_unit: num(r["매출액/단위"]),
