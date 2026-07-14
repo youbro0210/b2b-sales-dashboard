@@ -7,8 +7,10 @@ import { signOut } from "@/lib/actions";
 
 const baseNav = [
   { href: "/dashboard", label: "대시보드", icon: "📊" },
-  { href: "/b2b", label: "B2B 매출", icon: "🏢" },
-  { href: "/loading", label: "마트/온라인/특정", icon: "🚚" },
+  { href: "/b2b", label: "B2C 온라인", icon: "🏢" },
+  { href: "/loading", label: "마트", icon: "🏬" },
+  { href: "/online", label: "온라인", icon: "🛒" },
+  { href: "/special", label: "특정", icon: "📦" },
   { href: "/export", label: "수출대장", icon: "🌏" },
   { href: "/master", label: "기준정보 관리", icon: "🗂️" },
 ];
