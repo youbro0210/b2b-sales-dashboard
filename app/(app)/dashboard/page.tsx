@@ -146,26 +146,35 @@ export default function DashboardPage() {
   const mm = month.slice(5, 7);
   const prevYear = year - 1;
 
-  // 일자별 매출: 선택한 월 vs 작년 같은 달·같은 일자
+  // 전월 (선택한 월의 한 달 전) "YYYY-MM"
+  const prevMonthKey = useMemo(() => {
+    const m = Number(mm);
+    const py = m === 1 ? year - 1 : year;
+    const pm = m === 1 ? 12 : m - 1;
+    return `${py}-${String(pm).padStart(2, "0")}`;
+  }, [year, mm]);
+
+  // 일자별 매출: 당월 · 전월 같은 일자 · 작년 동월 같은 일자
   const daily = useMemo(() => {
     const days = new Date(year, Number(mm), 0).getDate();
-    const out: { day: string; 올해: number; 작년: number }[] = [];
+    const out: { day: string; 당월: number; 전월: number; 작년: number }[] = [];
     for (let d = 1; d <= days; d++) {
       const dd = String(d).padStart(2, "0");
       const cur = totalByDate[`${year}-${mm}-${dd}`] || 0;
-      const prev = totalByDate[`${prevYear}-${mm}-${dd}`] || 0;
-      if (cur || prev) out.push({ day: `${d}일`, 올해: cur, 작년: prev });
+      const pm = totalByDate[`${prevMonthKey}-${dd}`] || 0;
+      const ly = totalByDate[`${prevYear}-${mm}-${dd}`] || 0;
+      if (cur || pm || ly) out.push({ day: `${d}일`, 당월: cur, 전월: pm, 작년: ly });
     }
     return out;
-  }, [totalByDate, year, mm, prevYear]);
+  }, [totalByDate, year, mm, prevYear, prevMonthKey]);
 
-  // 올해 매출이 가장 높은 날 (막대를 다른 색으로 강조)
+  // 당월 매출이 가장 높은 날 (막대를 다른 색으로 강조)
   const peakIdx = useMemo(() => {
     let idx = -1;
     let max = 0;
     daily.forEach((d, i) => {
-      if (d.올해 > max) {
-        max = d.올해;
+      if (d.당월 > max) {
+        max = d.당월;
         idx = i;
       }
     });
@@ -298,7 +307,9 @@ export default function DashboardPage() {
             <div className="flex items-start justify-between gap-2 flex-wrap mb-4">
               <h2 className="font-semibold text-slate-100">
                 일자별 매출 ({month}){" "}
-                <span className="text-xs font-normal text-slate-400">vs {prevYear}년 동월</span>
+                <span className="text-xs font-normal text-slate-400">
+                  vs 전월({prevMonthKey}) · 작년 동월({prevYear}-{mm})
+                </span>
               </h2>
               <span className="text-[11px] text-slate-400">
                 <span style={{ color: C.amber }}>■</span> 최고 매출일 · 단위: 백만원
@@ -308,7 +319,7 @@ export default function DashboardPage() {
               <p className="text-sm text-slate-400">데이터가 없습니다.</p>
             ) : (
               <div className="w-full max-w-full overflow-x-auto">
-                <div style={{ minWidth: narrow ? Math.max(320, daily.length * 56) : undefined }}>
+                <div style={{ minWidth: narrow ? Math.max(360, daily.length * 74) : undefined }}>
               <ResponsiveContainer width="100%" height={320}>
                 <BarChart data={daily} barCategoryGap="22%" margin={{ top: 24, right: 8 }}>
                   <CartesianGrid strokeDasharray="2 6" stroke={C.grid} vertical={false} />
@@ -327,14 +338,13 @@ export default function DashboardPage() {
                     cursor={{ fill: "rgba(255,255,255,0.06)" }}
                   />
                   <Legend wrapperStyle={{ color: "#cbd5e1", fontSize: 12 }} />
-                  <Bar dataKey="작년" fill={C.slate} maxBarSize={26} radius={[4, 4, 0, 0]}>
-                    <LabelList dataKey="작년" position="top" formatter={millLabel} fill="#94a3b8" fontSize={10} />
-                  </Bar>
-                  <Bar dataKey="올해" fill={C.blue} maxBarSize={26} radius={[4, 4, 0, 0]}>
+                  <Bar dataKey="작년" fill={C.slate} maxBarSize={18} radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="전월" fill={C.green} maxBarSize={18} radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="당월" fill={C.blue} maxBarSize={18} radius={[3, 3, 0, 0]}>
                     {daily.map((_, i) => (
                       <Cell key={i} fill={i === peakIdx ? C.amber : C.blue} />
                     ))}
-                    <LabelList dataKey="올해" position="top" formatter={millLabel} fill="#e0f2fe" fontSize={10} />
+                    <LabelList dataKey="당월" position="top" formatter={millLabel} fill="#e0f2fe" fontSize={10} />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
