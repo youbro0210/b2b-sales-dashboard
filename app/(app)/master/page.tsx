@@ -56,7 +56,7 @@ function Customers() {
       <>
         <input className="input flex-1" placeholder="고객사명" value={name} onChange={(e) => setName(e.target.value)} />
         <select className="input max-w-[140px]" value={kind} onChange={(e) => setKind(e.target.value)}>
-          <option value="b2b">B2B</option>
+          <option value="b2b">B2C 온라인</option>
           <option value="export">수출</option>
           <option value="both">공용</option>
         </select>
@@ -69,7 +69,7 @@ function Customers() {
           {rows.map((r) => (
             <tr key={r.id}>
               <td>{r.name}</td>
-              <td>{r.kind === "b2b" ? "B2B" : r.kind === "export" ? "수출" : "공용"}</td>
+              <td>{r.kind === "b2b" ? "B2C 온라인" : r.kind === "export" ? "수출" : "공용"}</td>
               <td><button className="text-red-500 text-sm" onClick={() => del(r.id)}>삭제</button></td>
             </tr>
           ))}
