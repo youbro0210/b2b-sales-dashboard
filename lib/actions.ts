@@ -280,19 +280,39 @@ export async function deleteB2b(id: number) {
 
 // ----------------- 상차금액 -----------------
 
-// 기간 내 상차 데이터 건수 (삭제 전 확인용)
-export async function countLoadingRange(from: string, to: string) {
+// 기간 내 상차 데이터 건수 (삭제 전 확인용).
+// channelIds 를 주면 그 채널들만 센다 (마트/온라인/특정 화면별 범위)
+export async function countLoadingRange(
+  from: string,
+  to: string,
+  channelIds?: number[]
+) {
   await requireUser();
-  const rows = (await sql`select count(*)::int as n from loading_amounts
-                          where load_date >= ${from} and load_date <= ${to}`) as any[];
+  const rows = (channelIds && channelIds.length
+    ? await sql`select count(*)::int as n from loading_amounts
+                where load_date >= ${from} and load_date <= ${to}
+                  and channel_id = any(${channelIds}::bigint[])`
+    : await sql`select count(*)::int as n from loading_amounts
+                where load_date >= ${from} and load_date <= ${to}`) as any[];
   return Number(rows?.[0]?.n ?? 0);
 }
 
-// 기간 내 상차 데이터 삭제 (잘못 업로드한 데이터 정리용)
-export async function deleteLoadingRange(from: string, to: string) {
+// 기간 내 상차 데이터 삭제 (잘못 업로드한 데이터 정리용).
+// channelIds 를 주면 그 채널들만 지운다 (다른 화면 데이터 보존)
+export async function deleteLoadingRange(
+  from: string,
+  to: string,
+  channelIds?: number[]
+) {
   await requireUser();
-  await sql`delete from loading_amounts
-            where load_date >= ${from} and load_date <= ${to}`;
+  if (channelIds && channelIds.length) {
+    await sql`delete from loading_amounts
+              where load_date >= ${from} and load_date <= ${to}
+                and channel_id = any(${channelIds}::bigint[])`;
+  } else {
+    await sql`delete from loading_amounts
+              where load_date >= ${from} and load_date <= ${to}`;
+  }
   return { ok: true };
 }
 
@@ -306,7 +326,13 @@ export async function saveLoading(
   items: { channel_id: number; channel_name: string; supply_amount: number }[]
 ) {
   await requireUser();
-  await sql`delete from loading_amounts where load_date = ${date}`;
+  // 화면(마트/온라인/특정)이 나뉘어 있으므로, 이번에 저장하는 채널만 지운다.
+  // (일자 전체를 지우면 다른 화면의 데이터가 사라진다)
+  const ids = items.map((it) => it.channel_id).filter((v) => v != null);
+  if (ids.length) {
+    await sql`delete from loading_amounts
+              where load_date = ${date} and channel_id = any(${ids}::bigint[])`;
+  }
   for (const it of items) {
     if (!it.supply_amount) continue;
     await sql`insert into loading_amounts (load_date, channel_id, channel_name, supply_amount)
@@ -419,10 +445,21 @@ export async function bulkSaveLoading(
     const map = new Map(chans.map((c: any) => [String(c.name).trim(), c.id]));
 
     const valid = rows.filter((r) => r.load_date);
-    // 같은 날짜를 다시 올리면 기존 데이터를 "대체"한다 (여러 번 올려도 중복 누적되지 않음)
+    // 업로드에 포함된 (일자 + 채널) 만 지우고 다시 넣는다.
+    // 같은 파일을 여러 번 올려도 중복 누적되지 않고, 업로드에 없는 채널은 건드리지 않는다.
     const dates = Array.from(new Set(valid.map((r) => r.load_date)));
-    for (const d of dates) {
-      await sql`delete from loading_amounts where load_date = ${d}`;
+    const upIds = Array.from(
+      new Set(
+        valid
+          .map((r) => map.get(String(r.channel_name || "").trim()))
+          .filter((v) => v != null)
+      )
+    );
+    if (upIds.length) {
+      for (const d of dates) {
+        await sql`delete from loading_amounts
+                  where load_date = ${d} and channel_id = any(${upIds}::bigint[])`;
+      }
     }
 
     let n = 0;
@@ -452,7 +489,7 @@ export async function bulkSaveExport(
     supply_type: string | null;
     customer_name: string | null;
     country_name: string | null;
-    erp_code: string | null;
+    erp_code?: string | null;
     product_name: string | null;
     unit: string | null;
     sales_per_unit: number;
@@ -500,10 +537,24 @@ export async function bulkSaveExport(
 
 export async function dashboardData() {
   await requireUser();
-  const [b2b, exp, load] = await Promise.all([
+  const [b2b, exp, loadRows, chans] = await Promise.all([
     sql`select sale_date, customer_name, sales_amount, profit_amount from b2b_sales`,
     sql`select delivery_date, customer_name, country_name, sales_total from export_sales`,
-    sql`select load_date, supply_amount from loading_amounts`,
+    sql`select load_date, supply_amount, channel_id from loading_amounts`,
+    sql`select id, group_name from channels order by sort_order`,
   ]);
+
+  // group_name 은 그룹의 첫 채널에만 들어있으므로 앞의 값을 이어받아 채널→구분 맵을 만든다
+  const gmap = new Map<string, string>();
+  let cur = "";
+  for (const c of chans as any[]) {
+    if (c.group_name) cur = c.group_name;
+    gmap.set(String(c.id), c.group_name || cur);
+  }
+  const load = (loadRows as any[]).map((r) => ({
+    ...r,
+    group_name: gmap.get(String(r.channel_id)) ?? null,
+  }));
+
   return { b2b, exp, load };
 }
