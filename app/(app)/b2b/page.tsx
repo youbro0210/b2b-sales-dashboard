@@ -125,7 +125,7 @@ export default function B2bPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold">B2C 온라인 입력</h1>
+        <h1 className="text-2xl font-bold">B2C 오프라인 입력</h1>
         <p className="text-sm text-slate-500">일자별 거래처별 매출·이익 현황</p>
       </div>
 
@@ -143,7 +143,7 @@ export default function B2bPage() {
         <ExcelBox
           kind="b2b"
           onDone={fetchRows}
-          exportName={`B2C온라인_${date}.xlsx`}
+          exportName={`B2C오프라인_${date}.xlsx`}
           getExport={() => [
             ["일자", "고객사명", "제조원가", "매출액", "매출이익액", "이익율(%)", "비고"],
             ...rows.map((r) => [
@@ -156,7 +156,7 @@ export default function B2bPage() {
               r.note,
             ]),
           ]}
-          rangeExportName={(f, t) => `B2C온라인_${f}_${t}.xlsx`}
+          rangeExportName={(f, t) => `B2C오프라인_${f}_${t}.xlsx`}
           getRangeExport={async (f, t) => {
             const data = (await listB2bRange(f, t)) as any[];
             return [
