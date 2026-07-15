@@ -135,7 +135,7 @@ export default function DashboardPage() {
     .reduce((s, r) => s + num(r.supply_amount), 0);
   const totalSales = b2bSales + expSales + loadSales;
 
-  // 전체 매출(B2C 온라인 + 수출 + 마트/온라인/특정)을 일자별로 합산
+  // 전체 매출(B2C 오프라인 + 수출 + 마트/온라인/특정)을 일자별로 합산
   const totalByDate = useMemo(() => {
     const m: Record<string, number> = {};
     const add = (d: any, v: number) => {
@@ -295,7 +295,7 @@ export default function DashboardPage() {
           {/* 선택 월 KPI — 모바일 2열에서 줄이 맞도록 총매출을 2칸 차지시킨다 */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <Kpi title="총 매출 (선택 월)" value={eok(totalSales)} accent span2 />
-            <Kpi title="B2C 온라인" value={eok(b2bSales)} href={`/b2b?date=${todayStr}`} />
+            <Kpi title="B2C 오프라인" value={eok(b2bSales)} href={`/b2b?date=${todayStr}`} />
             <Kpi title="수출 매출" value={eok(expSales)} href={`/export?month=${month}`} />
             <Kpi title="마트" value={eok(martSales)} href={`/loading?date=${todayStr}`} />
             <Kpi title="온라인" value={eok(onlineSales)} href={`/online?date=${todayStr}`} />
@@ -317,7 +317,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
               <Today title="총 매출" value={todayStats.cur.total} prev={todayStats.prev.total} accent />
               <Today
-                title="B2C 온라인"
+                title="B2C 오프라인"
                 value={todayStats.cur.b2b}
                 prev={todayStats.prev.b2b}
                 href={`/b2b?date=${todayStr}`}
