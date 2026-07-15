@@ -9,7 +9,7 @@ type Kind = "b2b" | "loading" | "export";
 
 const TEMPLATES: Record<Kind, { file: string; headers: string[]; example: any[] }> = {
   b2b: {
-    file: "B2C온라인_업로드양식.xlsx",
+    file: "B2C오프라인_업로드양식.xlsx",
     headers: ["일자", "고객사명", "제조원가", "매출액", "매출이익액", "비고"],
     example: ["2026-06-01", "(주)푸디슨", 100000, 150000, 50000, ""],
   },
