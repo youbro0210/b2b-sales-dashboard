@@ -4,7 +4,7 @@ import InstallPWA from "@/components/InstallPWA";
 
 export const metadata: Metadata = {
   title: "은하수산 매출관리 시스템",
-  description: "은하수산 · B2C 온라인 · 수출 · 마트/온라인/특정 매출 통합 관리",
+  description: "은하수산 · B2C 오프라인 · 수출 · 마트/온라인/특정 매출 통합 관리",
   manifest: "/manifest.webmanifest",
   applicationName: "은하수산",
   appleWebApp: {
