@@ -7,7 +7,7 @@ import { signOut } from "@/lib/actions";
 
 const baseNav = [
   { href: "/dashboard", label: "대시보드", icon: "📊" },
-  { href: "/b2b", label: "B2C 온라인", icon: "🏢" },
+  { href: "/b2b", label: "B2C 오프라인", icon: "🏢" },
   { href: "/loading", label: "마트", icon: "🏬" },
   { href: "/online", label: "온라인", icon: "🛒" },
   { href: "/special", label: "특정", icon: "📦" },
