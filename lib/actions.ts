@@ -1,3 +1,20 @@
+
+// 기간(시작일~종료일) 상차 조회 — 마트/온라인/특정 현황용
+export async function listLoadingRange(from: string, to: string) {
+  await requireUser();
+  return await sql`select load_date, channel_id, channel_name, supply_amount
+                   from loading_amounts
+                   where load_date >= ${from} and load_date <= ${to}
+                   order by load_date, channel_id`;
+}
+
+// 기간(시작일~종료일) 수출대장 조회 — 현황용
+export async function listExportRange(from: string, to: string) {
+  await requireUser();
+  return await sql`select * from export_sales
+    where delivery_date >= ${from} and delivery_date <= ${to}
+    order by delivery_date, id`;
+}
 "use server";
 
 import bcrypt from "bcryptjs";
