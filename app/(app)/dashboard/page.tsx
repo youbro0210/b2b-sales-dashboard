@@ -219,6 +219,25 @@ export default function DashboardPage() {
     return out;
   }, [load, specialChan, year, mm, prevYear, prevMonthKey]);
 
+  // 특정 차트 단위 자동 조정: 채널별 매출 규모가 작으면(백만원 미만) 천원/원 단위로
+  // 표시해, 축·라벨이 전부 "0"으로 반올림돼 그래프가 깨져 보이는 문제를 막는다.
+  const specMax = useMemo(
+    () => specialDaily.reduce((m, d) => Math.max(m, d.당월, d.전월, d.작년), 0),
+    [specialDaily]
+  );
+  const specUnit = useMemo(() => {
+    if (specMax >= 1e8) return { div: 1e8, name: "억원" };
+    if (specMax >= 1e6) return { div: 1e6, name: "백만원" };
+    if (specMax >= 1e3) return { div: 1e3, name: "천원" };
+    return { div: 1, name: "원" };
+  }, [specMax]);
+  const specTick = (v: number) =>
+    (Number(v) / specUnit.div).toLocaleString("ko-KR", {
+      maximumFractionDigits: specUnit.div === 1 ? 0 : 1,
+    });
+  const specTip = (v: number) => specTick(v) + " " + specUnit.name;
+  const specLabel = (v: any) => (Number(v) ? specTick(Number(v)) : "");
+
   // 당월 매출이 가장 높은 날 (막대를 다른 색으로 강조)
   const peakIdx = useMemo(() => {
     let idx = -1;
@@ -327,9 +346,9 @@ export default function DashboardPage() {
         <div className="text-slate-500">불러오는 중...</div>
       ) : (
         <>
-          {/* 선택 월 KPI — 모바일 2열에서 줄이 맞도록 총매출을 2칸 차지시킨다 */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <Kpi title="총 매출 (선택 월)" value={eok(totalSales)} accent span2 />
+          {/* 선택 월 KPI — 오늘 매출과 동일하게 6개 타일을 2열(모바일)/3열(데스크톱)로 */}
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            <Kpi title="총 매출 (선택 월)" value={eok(totalSales)} accent />
             <Kpi title="B2B" value={eok(b2bSales)} href={`/b2b?date=${todayStr}`} />
             <Kpi title="수출 매출" value={eok(expSales)} href={`/export?month=${month}`} />
             <Kpi title="B2C 오프라인" value={eok(martSales)} href={`/loading?date=${todayStr}`} />
@@ -437,65 +456,6 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* 특정 일자별 매출 — 채널 선택(전체/개별) · 당월/전월/작년 비교 */}
-          <div className="card overflow-hidden min-w-0" style={panelStyle}>
-            <div className="flex items-start justify-between gap-2 flex-wrap mb-4">
-              <h2 className="font-semibold text-slate-100">
-                특정 일자별 매출 ({month}){" "}
-                <span className="text-xs font-normal text-slate-400">
-                  {specialChan || "전체 채널"} · vs 전월({prevMonthKey}) · 작년 동월({prevYear}-{mm})
-                </span>
-              </h2>
-              <select
-                className="input !py-1 !text-xs max-w-[190px] !bg-slate-800 !text-slate-100 !border-slate-600"
-                value={specialChan}
-                onChange={(e) => setSpecialChan(e.target.value)}
-              >
-                <option value="">전체 채널</option>
-                {specialChannels.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
-            {specialDaily.length === 0 ? (
-              <p className="text-sm text-slate-400">데이터가 없습니다.</p>
-            ) : (
-              <div className="w-full max-w-full overflow-x-auto">
-                <div style={{ minWidth: narrow ? Math.max(360, specialDaily.length * 62) : undefined }}>
-                  <ResponsiveContainer width="100%" height={320}>
-                    <BarChart data={specialDaily} barCategoryGap="8%" barGap={1} margin={{ top: 24, right: 8 }}>
-                      <CartesianGrid strokeDasharray="2 6" stroke={C.grid} vertical={false} />
-                      <XAxis
-                        dataKey="day"
-                        tick={axisTick}
-                        axisLine={{ stroke: C.grid }}
-                        tickLine={false}
-                        interval={0}
-                      />
-                      <YAxis tickFormatter={millTick} width={44} tick={axisTick} axisLine={false} tickLine={false} />
-                      <Tooltip
-                        formatter={(v: number) => millTip(v)}
-                        contentStyle={tooltipStyle}
-                        labelStyle={{ color: "#cbd5e1" }}
-                        cursor={{ fill: "rgba(255,255,255,0.06)" }}
-                      />
-                      <Legend wrapperStyle={{ color: "#cbd5e1", fontSize: 12 }} />
-                      <Bar dataKey="작년" fill={C.slate} maxBarSize={18} radius={[3, 3, 0, 0]}>
-                        <LabelList dataKey="작년" position="top" formatter={millLabel} fill="#94a3b8" fontSize={9} />
-                      </Bar>
-                      <Bar dataKey="전월" fill={C.green} maxBarSize={18} radius={[3, 3, 0, 0]}>
-                        <LabelList dataKey="전월" position="top" formatter={millLabel} fill="#86efac" fontSize={9} />
-                      </Bar>
-                      <Bar dataKey="당월" fill={C.blue} maxBarSize={18} radius={[3, 3, 0, 0]}>
-                        <LabelList dataKey="당월" position="top" formatter={millLabel} fill="#e0f2fe" fontSize={10} />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            )}
-          </div>
-
           <div className="card overflow-hidden min-w-0" style={panelStyle}>
             <div className="flex items-start justify-between gap-2 flex-wrap mb-4">
               <h2 className="font-semibold text-slate-100">
@@ -555,6 +515,67 @@ export default function DashboardPage() {
             </ResponsiveContainer>
               </div>
             </div>
+          </div>
+
+          {/* 특정 일자별 매출 — 채널 선택(전체/개별) · 당월/전월/작년 · 단위 자동조정 · 맨 아래 배치 */}
+          <div className="card overflow-hidden min-w-0" style={panelStyle}>
+            <div className="flex items-start justify-between gap-2 flex-wrap mb-4">
+              <h2 className="font-semibold text-slate-100">
+                특정 일자별 매출 ({month}){" "}
+                <span className="text-xs font-normal text-slate-400">
+                  {specialChan || "전체 채널"} · vs 전월({prevMonthKey}) · 작년 동월({prevYear}-{mm}) · 단위: {specUnit.name}
+                </span>
+              </h2>
+              <select
+                className="input !py-1 !text-xs max-w-[190px] !bg-slate-800 !text-slate-100 !border-slate-600"
+                value={specialChan}
+                onChange={(e) => setSpecialChan(e.target.value)}
+              >
+                <option value="">전체 채널</option>
+                {specialChannels.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+            {specialDaily.length === 0 ? (
+              <p className="text-sm text-slate-400">
+                {specialChan || "전체 채널"} · 해당 월/전월/작년에 매출 데이터가 없습니다.
+              </p>
+            ) : (
+              <div className="w-full max-w-full overflow-x-auto">
+                <div style={{ minWidth: narrow ? Math.max(360, specialDaily.length * 62) : undefined }}>
+                  <ResponsiveContainer width="100%" height={320}>
+                    <BarChart data={specialDaily} barCategoryGap="8%" barGap={1} margin={{ top: 24, right: 8 }}>
+                      <CartesianGrid strokeDasharray="2 6" stroke={C.grid} vertical={false} />
+                      <XAxis
+                        dataKey="day"
+                        tick={axisTick}
+                        axisLine={{ stroke: C.grid }}
+                        tickLine={false}
+                        interval={0}
+                      />
+                      <YAxis tickFormatter={specTick} width={44} tick={axisTick} axisLine={false} tickLine={false} />
+                      <Tooltip
+                        formatter={(v: number) => specTip(v)}
+                        contentStyle={tooltipStyle}
+                        labelStyle={{ color: "#cbd5e1" }}
+                        cursor={{ fill: "rgba(255,255,255,0.06)" }}
+                      />
+                      <Legend wrapperStyle={{ color: "#cbd5e1", fontSize: 12 }} />
+                      <Bar dataKey="작년" fill={C.slate} maxBarSize={18} radius={[3, 3, 0, 0]}>
+                        <LabelList dataKey="작년" position="top" formatter={specLabel} fill="#94a3b8" fontSize={9} />
+                      </Bar>
+                      <Bar dataKey="전월" fill={C.green} maxBarSize={18} radius={[3, 3, 0, 0]}>
+                        <LabelList dataKey="전월" position="top" formatter={specLabel} fill="#86efac" fontSize={9} />
+                      </Bar>
+                      <Bar dataKey="당월" fill={C.blue} maxBarSize={18} radius={[3, 3, 0, 0]}>
+                        <LabelList dataKey="당월" position="top" formatter={specLabel} fill="#e0f2fe" fontSize={10} />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
           </div>
         </>
       )}
