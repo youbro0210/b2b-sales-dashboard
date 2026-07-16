@@ -60,6 +60,7 @@ export default function ExcelBox({
   getTemplateRows,
   getRangeExport,
   rangeExportName,
+  templateFile,
 }: {
   kind: Kind;
   onDone?: () => void;
@@ -70,6 +71,8 @@ export default function ExcelBox({
   // 기간 데이터 다운로드 (시작일~종료일)
   getRangeExport?: (from: string, to: string) => Promise<any[][]>;
   rangeExportName?: (from: string, to: string) => string;
+  // 양식 파일명 재정의 (예: 특정 입력에서는 "특정_업로드양식.xlsx")
+  templateFile?: string;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -84,7 +87,7 @@ export default function ExcelBox({
     const ws = XLSX.utils.aoa_to_sheet([t.headers, ...rows]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "양식");
-    XLSX.writeFile(wb, t.file);
+    XLSX.writeFile(wb, templateFile || t.file);
   };
 
   const downloadRange = async () => {
