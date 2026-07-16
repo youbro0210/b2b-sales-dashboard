@@ -219,25 +219,6 @@ export default function DashboardPage() {
     return out;
   }, [load, specialChan, year, mm, prevYear, prevMonthKey]);
 
-  // 특정 차트 단위 자동 조정: 채널별 매출 규모가 작으면(백만원 미만) 천원/원 단위로
-  // 표시해, 축·라벨이 전부 "0"으로 반올림돼 그래프가 깨져 보이는 문제를 막는다.
-  const specMax = useMemo(
-    () => specialDaily.reduce((m, d) => Math.max(m, d.당월, d.전월, d.작년), 0),
-    [specialDaily]
-  );
-  const specUnit = useMemo(() => {
-    if (specMax >= 1e8) return { div: 1e8, name: "억원" };
-    if (specMax >= 1e6) return { div: 1e6, name: "백만원" };
-    if (specMax >= 1e3) return { div: 1e3, name: "천원" };
-    return { div: 1, name: "원" };
-  }, [specMax]);
-  const specTick = (v: number) =>
-    (Number(v) / specUnit.div).toLocaleString("ko-KR", {
-      maximumFractionDigits: specUnit.div === 1 ? 0 : 1,
-    });
-  const specTip = (v: number) => specTick(v) + " " + specUnit.name;
-  const specLabel = (v: any) => (Number(v) ? specTick(Number(v)) : "");
-
   // 당월 매출이 가장 높은 날 (막대를 다른 색으로 강조)
   const peakIdx = useMemo(() => {
     let idx = -1;
@@ -523,7 +504,7 @@ export default function DashboardPage() {
               <h2 className="font-semibold text-slate-100">
                 특정 일자별 매출 ({month}){" "}
                 <span className="text-xs font-normal text-slate-400">
-                  {specialChan || "전체 채널"} · vs 전월({prevMonthKey}) · 작년 동월({prevYear}-{mm}) · 단위: {specUnit.name}
+                  {specialChan || "전체 채널"} · vs 전월({prevMonthKey}) · 작년 동월({prevYear}-{mm}) · 단위: 백만원
                 </span>
               </h2>
               <select
@@ -554,22 +535,22 @@ export default function DashboardPage() {
                         tickLine={false}
                         interval={0}
                       />
-                      <YAxis tickFormatter={specTick} width={44} tick={axisTick} axisLine={false} tickLine={false} />
+                      <YAxis tickFormatter={millTick} width={44} tick={axisTick} axisLine={false} tickLine={false} />
                       <Tooltip
-                        formatter={(v: number) => specTip(v)}
+                        formatter={(v: number) => millTip(v)}
                         contentStyle={tooltipStyle}
                         labelStyle={{ color: "#cbd5e1" }}
                         cursor={{ fill: "rgba(255,255,255,0.06)" }}
                       />
                       <Legend wrapperStyle={{ color: "#cbd5e1", fontSize: 12 }} />
                       <Bar dataKey="작년" fill={C.slate} maxBarSize={18} radius={[3, 3, 0, 0]}>
-                        <LabelList dataKey="작년" position="top" formatter={specLabel} fill="#94a3b8" fontSize={9} />
+                        <LabelList dataKey="작년" position="top" formatter={millLabel} fill="#94a3b8" fontSize={9} />
                       </Bar>
                       <Bar dataKey="전월" fill={C.green} maxBarSize={18} radius={[3, 3, 0, 0]}>
-                        <LabelList dataKey="전월" position="top" formatter={specLabel} fill="#86efac" fontSize={9} />
+                        <LabelList dataKey="전월" position="top" formatter={millLabel} fill="#86efac" fontSize={9} />
                       </Bar>
                       <Bar dataKey="당월" fill={C.blue} maxBarSize={18} radius={[3, 3, 0, 0]}>
-                        <LabelList dataKey="당월" position="top" formatter={specLabel} fill="#e0f2fe" fontSize={10} />
+                        <LabelList dataKey="당월" position="top" formatter={millLabel} fill="#e0f2fe" fontSize={10} />
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
