@@ -1,7 +1,5 @@
-"use client";
-
-import SpecialMatrix from "@/components/SpecialMatrix";
+import SpecialDaily from "@/components/SpecialDaily";
 
 export default function SpecialPage() {
-  return <SpecialMatrix />;
+  return <SpecialDaily />;
 }
