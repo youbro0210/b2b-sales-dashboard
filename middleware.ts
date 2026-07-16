@@ -18,7 +18,9 @@ export async function middleware(request: NextRequest) {
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
   }
-  return NextResponse.next();
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", path);
+  return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
 // PWA 리소스(매니페스트·앱 아이콘)는 로그인 없이 접근 가능해야 설치가 된다.
