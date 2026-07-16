@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { listLoginHistory } from "@/lib/actions";
+import { useCallback, useState } from "react";
+import { listLoginHistory, invalidateAllSessions, signOut } from "@/lib/actions";
 import { todayKST } from "@/lib/types";
 
 const PAGE = 20;
@@ -32,6 +32,24 @@ export default function LoginHistoryPage() {
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  // 모든 기기·모든 사용자 강제 로그아웃 (세션 발급 기준시각 갱신)
+  async function logoutAll() {
+    if (
+      !confirm(
+        "모든 사용자를 모든 기기에서 로그아웃합니다.\n본인도 로그아웃되어 다시 로그인해야 합니다. 계속할까요?"
+      )
+    )
+      return;
+    setBusy(true);
+    try {
+      await invalidateAllSessions();
+      await signOut();
+    } finally {
+      window.location.href = "/login";
+    }
+  }
 
   const fetchRows = useCallback(
     async (p: number) => {
@@ -52,9 +70,18 @@ export default function LoginHistoryPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold">로그인 이력</h1>
-        <p className="text-sm text-slate-500">회원 로그인 기록 조회 (관리자 전용)</p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold">로그인 이력</h1>
+          <p className="text-sm text-slate-500">회원 로그인 기록 조회 (관리자 전용)</p>
+        </div>
+        <button
+          className="btn-ghost border border-red-200 text-red-600 hover:bg-red-50 whitespace-nowrap"
+          onClick={logoutAll}
+          disabled={busy}
+        >
+          {busy ? "처리 중..." : "🔒 전체 로그아웃"}
+        </button>
       </div>
 
       <div className="card">
