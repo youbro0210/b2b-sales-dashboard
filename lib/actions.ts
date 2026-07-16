@@ -107,6 +107,15 @@ export async function signOut() {
   cookies().delete(SESSION_COOKIE);
 }
 
+export async function invalidateAllSessions(): Promise<{ ok: boolean; epoch: number }> {
+  await requireAdmin();
+  await sql`create table if not exists app_config (key text primary key, value text)`;
+  const now = Math.floor(Date.now() / 1000);
+  await sql`insert into app_config (key, value) values ('session_epoch', ${String(now)})
+            on conflict (key) do update set value = excluded.value`;
+  return { ok: true, epoch: now };
+}
+
 // ----------------- 등급 관리 (관리자) -----------------
 
 export async function listGrades() {
