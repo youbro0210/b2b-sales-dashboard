@@ -8,39 +8,54 @@ import { signOut } from "@/lib/actions";
 type NavItem = { href: string; label: string; icon: string };
 type NavRow = NavItem | { divider: string };
 
-const baseNav: NavRow[] = [
-  { href: "/dashboard", label: "대시보드", icon: "📊" },
+// 대시보드 · 현황: 모든 승인 사용자
+const dashboardRow: NavRow = { href: "/dashboard", label: "대시보드", icon: "📊" };
+// 입력: 편집 권한(can_edit) 또는 관리자만
+const editNav: NavRow[] = [
   { divider: "입력" },
   { href: "/b2b", label: "B2B", icon: "🏢" },
   { href: "/loading", label: "B2C 오프라인", icon: "🏬" },
   { href: "/online", label: "B2C 온라인", icon: "🛒" },
   { href: "/special", label: "특정", icon: "📦" },
   { href: "/export", label: "수출대장", icon: "🌏" },
+];
+// 현황: 모든 승인 사용자
+const reportNav: NavRow[] = [
   { divider: "현황" },
   { href: "/report/b2b", label: "B2B 현황", icon: "📈" },
   { href: "/report/mart", label: "B2C 오프라인 현황", icon: "📈" },
   { href: "/report/online", label: "B2C 온라인 현황", icon: "📈" },
   { href: "/report/special", label: "특정 현황", icon: "📈" },
   { href: "/report/export", label: "수출대장 현황", icon: "📈" },
+];
+// 관리(설정): 관리자만
+const adminNav: NavRow[] = [
   { divider: "관리" },
   { href: "/master", label: "기준정보 관리", icon: "🗂️" },
-];
-const adminNav: NavRow[] = [
   { href: "/members", label: "회원관리", icon: "👤" },
   { href: "/grades", label: "등급관리", icon: "🏷️" },
+  { href: "/login-history", label: "로그인 이력", icon: "🕘" },
 ];
 
 export default function Sidebar({
   email,
   isAdmin,
+  canEdit,
 }: {
   email: string;
   isAdmin: boolean;
+  canEdit: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const nav = isAdmin ? [...baseNav, ...adminNav] : baseNav;
+
+  const nav: NavRow[] = [
+    dashboardRow,
+    ...(canEdit || isAdmin ? editNav : []),
+    ...reportNav,
+    ...(isAdmin ? adminNav : []),
+  ];
 
   async function logout() {
     await signOut();
@@ -101,8 +116,8 @@ export default function Sidebar({
             if ("divider" in item) {
               return (
                 <div
-                  key={"div-" + idx}
-                  className="px-3 pt-3 pb-1 text-[10px] font-semibold tracking-wider text-sky-200/40 uppercase"
+                  key={"d" + idx}
+                  className="px-4 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wider text-sky-200/50"
                 >
                   {item.divider}
                 </div>
@@ -131,7 +146,6 @@ export default function Sidebar({
                     : undefined
                 }
               >
-                {/* 선택된 메뉴 왼쪽 흰색 인디케이터 */}
                 {active && (
                   <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-white" />
                 )}
