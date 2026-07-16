@@ -561,7 +561,7 @@ export async function dashboardData() {
   const [b2b, exp, loadRows, chans] = await Promise.all([
     sql`select sale_date, customer_name, sales_amount, profit_amount from b2b_sales`,
     sql`select delivery_date, customer_name, country_name, sales_total from export_sales`,
-    sql`select load_date, supply_amount, channel_id from loading_amounts`,
+    sql`select load_date, supply_amount, channel_id, channel_name from loading_amounts`,
     sql`select id, group_name from channels order by sort_order`,
   ]);
 
