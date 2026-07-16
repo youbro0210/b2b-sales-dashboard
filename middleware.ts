@@ -6,7 +6,7 @@ export async function middleware(request: NextRequest) {
   const session = await verifySession(token);
 
   const path = request.nextUrl.pathname;
-  const isAuthPage = path.startsWith("/login") || path.startsWith("/signup");
+  const isAuthPage = path === "/login" || path === "/signup";
 
   if (!session && !isAuthPage) {
     const url = request.nextUrl.clone();
