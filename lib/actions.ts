@@ -1,7 +1,7 @@
 "use server";
 
 import bcrypt from "bcryptjs";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { sql } from "@/lib/db";
 import { signSession, verifySession, SESSION_COOKIE } from "@/lib/jwt";
 
@@ -85,6 +85,18 @@ export async function signIn(
     if (!ok) return { ok: false, error: "이메일 또는 비밀번호가 올바르지 않습니다." };
     const token = await signSession({ uid: Number(rows[0].id), email: rows[0].email });
     setSessionCookie(token);
+    try {
+      await sql`create table if not exists login_history (
+        id bigserial primary key,
+        user_id bigint,
+        email text,
+        ip text,
+        logged_in_at timestamptz not null default now()
+      )`;
+      const ipHdr = (headers().get("x-forwarded-for") || "").split(",")[0].trim();
+      await sql`insert into login_history (user_id, email, ip)
+                values (${Number(rows[0].id)}, ${rows[0].email}, ${ipHdr || null})`;
+    } catch {}
     return { ok: true };
   } catch (e: any) {
     return { ok: false, error: "로그인 처리 중 오류가 발생했습니다: " + (e?.message ?? "") };
@@ -148,6 +160,43 @@ export async function deleteUser(id: number) {
   const s = await requireAdmin();
   if (Number(s.uid) === Number(id)) throw new Error("본인 계정은 삭제할 수 없습니다.");
   await sql`delete from users where id=${id}`;
+}
+
+// ----------------- 로그인 이력 (관리자) -----------------
+
+export async function listLoginHistory(
+  page = 0,
+  pageSize = 20,
+  from?: string,
+  to?: string
+): Promise<{ ok: boolean; rows: any[]; total: number }> {
+  await requireAdmin();
+  try {
+    await sql`create table if not exists login_history (
+      id bigserial primary key,
+      user_id bigint,
+      email text,
+      ip text,
+      logged_in_at timestamptz not null default now()
+    )`;
+    const off = Math.max(0, page) * pageSize;
+    const f = from || "1900-01-01";
+    const t = to || "2999-12-31";
+    const rows = await sql`
+      select h.id, h.email, h.ip, h.logged_in_at, u.name as user_name
+      from login_history h left join users u on u.id = h.user_id
+      where h.logged_in_at >= ${f}::date
+        and h.logged_in_at < (${t}::date + interval '1 day')
+      order by h.logged_in_at desc
+      limit ${pageSize} offset ${off}`;
+    const cnt = await sql`
+      select count(*)::int as n from login_history
+      where logged_in_at >= ${f}::date
+        and logged_in_at < (${t}::date + interval '1 day')`;
+    return { ok: true, rows: rows as any[], total: Number((cnt as any[])[0]?.n ?? 0) };
+  } catch (e: any) {
+    return { ok: true, rows: [], total: 0 };
+  }
 }
 
 // ----------------- 마스터: 고객사 -----------------
