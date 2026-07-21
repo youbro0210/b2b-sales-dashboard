@@ -50,7 +50,7 @@ const ymd = (d: any): string => {
 const monthKey = (d: any) => ymd(d).slice(0, 7);
 const num = (v: any) => Number(v ?? 0);
 
-// 다크 차트 패널 테마 (Apple Fitness 스타일 참고)
+// 다크 차트 패널 테마
 const C = {
   panel: "#0A2540",
   grid: "#1e3a52",
@@ -72,6 +72,8 @@ const tooltipStyle = {
 const axisTick = { fill: C.axis, fontSize: 11 } as const;
 
 type Any = Record<string, any>;
+// 일자별 비교 차트에 넣는 단위 행
+type DayRow = { d: string; name: string; amt: number };
 
 // 상차 채널 '구분' → 메뉴 매핑 (마트/온라인/특정 메뉴와 동일 기준)
 const G_MART = ["오프라인", "롯데마트_수수료업체", "이마트_수수료업체"];
@@ -85,7 +87,11 @@ export default function DashboardPage() {
   const [load, setLoad] = useState<Any[]>([]);
   const [month, setMonth] = useState<string>(() => monthKST());
   const [loading, setLoading] = useState(true);
-  const [specialChan, setSpecialChan] = useState<string>(""); // "" = 전체 특정 채널
+  // 일자별 비교 차트의 선택 채널/고객사 ("" = 전체)
+  const [b2bCust, setB2bCust] = useState<string>("");
+  const [martChan, setMartChan] = useState<string>("");
+  const [onlineChan, setOnlineChan] = useState<string>("");
+  const [specialChan, setSpecialChan] = useState<string>("");
 
   // 좁은 화면(모바일)에서는 차트에 최소 폭을 주고 가로 스크롤시켜
   // 막대/라벨이 겹치지 않게 한다.
@@ -137,7 +143,7 @@ export default function DashboardPage() {
     .reduce((s, r) => s + num(r.supply_amount), 0);
   const totalSales = b2bSales + expSales + loadSales;
 
-  // 전체 매출(B2C 오프라인 + 수출 + 마트/온라인/특정)을 일자별로 합산
+  // 전체 매출(B2B + 수출 + 마트/온라인/특정)을 일자별로 합산
   const totalByDate = useMemo(() => {
     const m: Record<string, number> = {};
     const add = (d: any, v: number) => {
@@ -186,38 +192,34 @@ export default function DashboardPage() {
     return out;
   }, [totalByDate, year, mm, prevYear, prevMonthKey]);
 
-  // 특정 채널 목록 (드롭다운용)
-  const specialChannels = useMemo(() => {
-    const s = new Set<string>();
-    load.forEach((r) => {
-      if (inGroup(r, G_SPECIAL) && r.channel_name) s.add(String(r.channel_name));
-    });
-    return Array.from(s).sort((a, b) => a.localeCompare(b));
-  }, [load]);
+  // ---- 부문별 일자별 비교 차트용 데이터 (B2B / B2C 오프라인 / B2C 온라인 / 특정) ----
+  const b2bRows = useMemo<DayRow[]>(
+    () =>
+      b2b.map((r) => ({
+        d: ymd(r.sale_date),
+        name: String(r.customer_name ?? "").trim() || "(미지정)",
+        amt: num(r.sales_amount),
+      })),
+    [b2b]
+  );
+  const loadRowsOf = (gs: string[]) =>
+    load
+      .filter((r) => inGroup(r, gs))
+      .map((r) => ({
+        d: ymd(r.load_date),
+        name: String(r.channel_name ?? "").trim() || "(미지정)",
+        amt: num(r.supply_amount),
+      }));
+  const martRows = useMemo<DayRow[]>(() => loadRowsOf(G_MART), [load]);
+  const onlineRows = useMemo<DayRow[]>(() => loadRowsOf(G_ONLINE), [load]);
+  const specialRows = useMemo<DayRow[]>(() => loadRowsOf(G_SPECIAL), [load]);
 
-  // 특정 일자별 매출: 선택 채널(또는 전체) 기준 당월·전월·작년 동일자
-  const specialDaily = useMemo(() => {
-    const rows = load.filter(
-      (r) =>
-        inGroup(r, G_SPECIAL) &&
-        (!specialChan || String(r.channel_name) === specialChan)
-    );
-    const byDate: Record<string, number> = {};
-    rows.forEach((r) => {
-      const k = ymd(r.load_date);
-      if (k) byDate[k] = (byDate[k] || 0) + num(r.supply_amount);
-    });
-    const days = new Date(year, Number(mm), 0).getDate();
-    const out: { day: string; 당월: number; 전월: number; 작년: number }[] = [];
-    for (let d = 1; d <= days; d++) {
-      const dd = String(d).padStart(2, "0");
-      const cur = byDate[`${year}-${mm}-${dd}`] || 0;
-      const pm = byDate[`${prevMonthKey}-${dd}`] || 0;
-      const ly = byDate[`${prevYear}-${mm}-${dd}`] || 0;
-      if (cur || pm || ly) out.push({ day: `${d}일`, 당월: cur, 전월: pm, 작년: ly });
-    }
-    return out;
-  }, [load, specialChan, year, mm, prevYear, prevMonthKey]);
+  const namesOf = (rows: DayRow[]) =>
+    Array.from(new Set(rows.map((r) => r.name))).sort((a, b) => a.localeCompare(b));
+  const b2bNames = useMemo(() => namesOf(b2bRows), [b2bRows]);
+  const martNames = useMemo(() => namesOf(martRows), [martRows]);
+  const onlineNames = useMemo(() => namesOf(onlineRows), [onlineRows]);
+  const specialNames = useMemo(() => namesOf(specialRows), [specialRows]);
 
   // 당월 매출이 가장 높은 날 (막대를 다른 색으로 강조)
   const peakIdx = useMemo(() => {
@@ -303,6 +305,9 @@ export default function DashboardPage() {
     return Array.from(set).sort().reverse();
   }, [b2b, exp, load, month]);
 
+  // 부문별 차트 공통 props
+  const cmp = { month, prevMonthKey, prevYear, mm, year, narrow };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -337,7 +342,7 @@ export default function DashboardPage() {
             <Kpi title="특정" value={eok(specialSales)} href={`/special?date=${todayStr}`} />
           </div>
 
-          {/* 오늘 매출 — 총매출 라인 바로 밑, 앰버 톤으로 구분 */}
+          {/* 오늘 매출 */}
           <div className="card !bg-teal-50 !border-teal-200">
             <div className="flex items-start justify-between gap-2 mb-3 flex-wrap">
               <div>
@@ -383,6 +388,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* 전체 일자별 매출 */}
           <div className="card overflow-hidden min-w-0" style={panelStyle}>
             <div className="flex items-start justify-between gap-2 flex-wrap mb-4">
               <h2 className="font-semibold text-slate-100">
@@ -400,133 +406,8 @@ export default function DashboardPage() {
             ) : (
               <div className="w-full max-w-full overflow-x-auto">
                 <div style={{ minWidth: narrow ? Math.max(360, daily.length * 62) : undefined }}>
-              <ResponsiveContainer width="100%" height={320}>
-                <BarChart data={daily} barCategoryGap="8%" barGap={1} margin={{ top: 24, right: 8 }}>
-                  <CartesianGrid strokeDasharray="2 6" stroke={C.grid} vertical={false} />
-                  <XAxis
-                    dataKey="day"
-                    tick={axisTick}
-                    axisLine={{ stroke: C.grid }}
-                    tickLine={false}
-                    interval={0}
-                  />
-                  <YAxis tickFormatter={millTick} width={44} tick={axisTick} axisLine={false} tickLine={false} />
-                  <Tooltip
-                    formatter={(v: number) => millTip(v)}
-                    contentStyle={tooltipStyle}
-                    labelStyle={{ color: "#cbd5e1" }}
-                    cursor={{ fill: "rgba(255,255,255,0.06)" }}
-                  />
-                  <Legend wrapperStyle={{ color: "#cbd5e1", fontSize: 12 }} />
-                  <Bar dataKey="작년" fill={C.slate} maxBarSize={18} radius={[3, 3, 0, 0]}>
-                    <LabelList dataKey="작년" position="top" formatter={millLabel} fill="#94a3b8" fontSize={9} />
-                  </Bar>
-                  <Bar dataKey="전월" fill={C.green} maxBarSize={18} radius={[3, 3, 0, 0]}>
-                    <LabelList dataKey="전월" position="top" formatter={millLabel} fill="#86efac" fontSize={9} />
-                  </Bar>
-                  <Bar dataKey="당월" fill={C.blue} maxBarSize={18} radius={[3, 3, 0, 0]}>
-                    {daily.map((_, i) => (
-                      <Cell key={i} fill={i === peakIdx ? C.amber : C.blue} />
-                    ))}
-                    <LabelList dataKey="당월" position="top" formatter={millLabel} fill="#e0f2fe" fontSize={10} />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="card overflow-hidden min-w-0" style={panelStyle}>
-            <div className="flex items-start justify-between gap-2 flex-wrap mb-4">
-              <h2 className="font-semibold text-slate-100">
-                월별 매출 추이 ({year}년){" "}
-                <span className="text-xs font-normal text-slate-400">vs {prevYear}년</span>
-              </h2>
-              <span className="text-[11px] text-slate-400">단위: 백만원</span>
-            </div>
-            <div className="w-full max-w-full overflow-x-auto">
-              <div style={{ minWidth: narrow ? 720 : undefined }}>
-            <ResponsiveContainer width="100%" height={320}>
-              <LineChart data={monthly} margin={{ top: 26, right: 14, bottom: 6 }}>
-                <CartesianGrid strokeDasharray="2 6" stroke={C.grid} vertical={false} />
-                <XAxis dataKey="month" tick={axisTick} axisLine={{ stroke: C.grid }} tickLine={false} />
-                <YAxis tickFormatter={millTick} width={44} tick={axisTick} axisLine={false} tickLine={false} />
-                <Tooltip
-                  formatter={(v: number) => millTip(v)}
-                  contentStyle={tooltipStyle}
-                  labelStyle={{ color: "#cbd5e1" }}
-                  cursor={{ stroke: "#475569" }}
-                />
-                <Legend wrapperStyle={{ color: "#cbd5e1", fontSize: 12 }} />
-                <ReferenceLine
-                  y={totalByMonth[prevMonthKey] || 0}
-                  stroke={C.amber}
-                  strokeDasharray="4 4"
-                  ifOverflow="extendDomain"
-                  label={{
-                    value: `지난달(${Number(prevMonthKey.slice(5, 7))}월) ${millLabel(totalByMonth[prevMonthKey] || 0)}`,
-                    position: "insideTopRight",
-                    fill: C.amber,
-                    fontSize: 10,
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="작년"
-                  stroke={C.slate}
-                  strokeWidth={2.5}
-                  strokeDasharray="5 4"
-                  dot={{ r: 2 }}
-                  activeDot={{ r: 5 }}
-                >
-                  <LabelList dataKey="작년" position="bottom" formatter={millLabel} fill="#94a3b8" fontSize={10} />
-                </Line>
-                <Line
-                  type="monotone"
-                  dataKey="올해"
-                  stroke={C.blue}
-                  strokeWidth={3}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 6 }}
-                >
-                  <LabelList dataKey="올해" position="top" formatter={millLabel} fill="#e0f2fe" fontSize={10} />
-                </Line>
-              </LineChart>
-            </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
-
-          {/* 특정 일자별 매출 — 채널 선택(전체/개별) · 당월/전월/작년 · 단위 자동조정 · 맨 아래 배치 */}
-          <div className="card overflow-hidden min-w-0" style={panelStyle}>
-            <div className="flex items-start justify-between gap-2 flex-wrap mb-4">
-              <h2 className="font-semibold text-slate-100">
-                특정 일자별 매출 ({month}){" "}
-                <span className="text-xs font-normal text-slate-400">
-                  {specialChan || "전체 채널"} · vs 전월({prevMonthKey}) · 작년 동월({prevYear}-{mm}) · 단위: 백만원
-                </span>
-              </h2>
-              <select
-                className="input !py-1 !text-xs max-w-[190px] !bg-slate-800 !text-slate-100 !border-slate-600"
-                value={specialChan}
-                onChange={(e) => setSpecialChan(e.target.value)}
-              >
-                <option value="">전체 채널</option>
-                {specialChannels.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
-            {specialDaily.length === 0 ? (
-              <p className="text-sm text-slate-400">
-                {specialChan || "전체 채널"} · 해당 월/전월/작년에 매출 데이터가 없습니다.
-              </p>
-            ) : (
-              <div className="w-full max-w-full overflow-x-auto">
-                <div style={{ minWidth: narrow ? Math.max(360, specialDaily.length * 62) : undefined }}>
                   <ResponsiveContainer width="100%" height={320}>
-                    <BarChart data={specialDaily} barCategoryGap="8%" barGap={1} margin={{ top: 24, right: 8 }}>
+                    <BarChart data={daily} barCategoryGap="8%" barGap={1} margin={{ top: 24, right: 8 }}>
                       <CartesianGrid strokeDasharray="2 6" stroke={C.grid} vertical={false} />
                       <XAxis
                         dataKey="day"
@@ -550,6 +431,9 @@ export default function DashboardPage() {
                         <LabelList dataKey="전월" position="top" formatter={millLabel} fill="#86efac" fontSize={9} />
                       </Bar>
                       <Bar dataKey="당월" fill={C.blue} maxBarSize={18} radius={[3, 3, 0, 0]}>
+                        {daily.map((_, i) => (
+                          <Cell key={i} fill={i === peakIdx ? C.amber : C.blue} />
+                        ))}
                         <LabelList dataKey="당월" position="top" formatter={millLabel} fill="#e0f2fe" fontSize={10} />
                       </Bar>
                     </BarChart>
@@ -558,13 +442,222 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
+
+          {/* 월별 매출 추이 */}
+          <div className="card overflow-hidden min-w-0" style={panelStyle}>
+            <div className="flex items-start justify-between gap-2 flex-wrap mb-4">
+              <h2 className="font-semibold text-slate-100">
+                월별 매출 추이 ({year}년){" "}
+                <span className="text-xs font-normal text-slate-400">vs {prevYear}년</span>
+              </h2>
+              <span className="text-[11px] text-slate-400">단위: 백만원</span>
+            </div>
+            <div className="w-full max-w-full overflow-x-auto">
+              <div style={{ minWidth: narrow ? 720 : undefined }}>
+                <ResponsiveContainer width="100%" height={320}>
+                  <LineChart data={monthly} margin={{ top: 26, right: 14, bottom: 6 }}>
+                    <CartesianGrid strokeDasharray="2 6" stroke={C.grid} vertical={false} />
+                    <XAxis dataKey="month" tick={axisTick} axisLine={{ stroke: C.grid }} tickLine={false} />
+                    <YAxis tickFormatter={millTick} width={44} tick={axisTick} axisLine={false} tickLine={false} />
+                    <Tooltip
+                      formatter={(v: number) => millTip(v)}
+                      contentStyle={tooltipStyle}
+                      labelStyle={{ color: "#cbd5e1" }}
+                      cursor={{ stroke: "#475569" }}
+                    />
+                    <Legend wrapperStyle={{ color: "#cbd5e1", fontSize: 12 }} />
+                    <ReferenceLine
+                      y={totalByMonth[prevMonthKey] || 0}
+                      stroke={C.amber}
+                      strokeDasharray="4 4"
+                      ifOverflow="extendDomain"
+                      label={{
+                        value: `지난달(${Number(prevMonthKey.slice(5, 7))}월) ${millLabel(totalByMonth[prevMonthKey] || 0)}`,
+                        position: "insideTopRight",
+                        fill: C.amber,
+                        fontSize: 10,
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="작년"
+                      stroke={C.slate}
+                      strokeWidth={2.5}
+                      strokeDasharray="5 4"
+                      dot={{ r: 2 }}
+                      activeDot={{ r: 5 }}
+                    >
+                      <LabelList dataKey="작년" position="bottom" formatter={millLabel} fill="#94a3b8" fontSize={10} />
+                    </Line>
+                    <Line
+                      type="monotone"
+                      dataKey="올해"
+                      stroke={C.blue}
+                      strokeWidth={3}
+                      dot={{ r: 3 }}
+                      activeDot={{ r: 6 }}
+                    >
+                      <LabelList dataKey="올해" position="top" formatter={millLabel} fill="#e0f2fe" fontSize={10} />
+                    </Line>
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
+          {/* 부문별 일자별 매출 — 모두 같은 구조 (당월/전월/작년 · 채널·고객사 선택 · 백만원) */}
+          <DailyCompareCard
+            {...cmp}
+            title="B2B 일자별 매출"
+            rows={b2bRows}
+            names={b2bNames}
+            sel={b2bCust}
+            setSel={setB2bCust}
+            allLabel="전체 고객사"
+          />
+          <DailyCompareCard
+            {...cmp}
+            title="B2C 오프라인 일자별 매출"
+            rows={martRows}
+            names={martNames}
+            sel={martChan}
+            setSel={setMartChan}
+            allLabel="전체 채널"
+          />
+          <DailyCompareCard
+            {...cmp}
+            title="B2C 온라인 일자별 매출"
+            rows={onlineRows}
+            names={onlineNames}
+            sel={onlineChan}
+            setSel={setOnlineChan}
+            allLabel="전체 채널"
+          />
+          <DailyCompareCard
+            {...cmp}
+            title="특정 일자별 매출"
+            rows={specialRows}
+            names={specialNames}
+            sel={specialChan}
+            setSel={setSpecialChan}
+            allLabel="전체 채널"
+          />
         </>
       )}
     </div>
   );
 }
 
-// 오늘 매출 타일: 금액(원) + 작년 같은 날 대비 증감률
+// 일자별(당월/전월/작년 동일자) 비교 막대차트 — 채널·고객사 선택 가능
+function DailyCompareCard({
+  title,
+  rows,
+  names,
+  sel,
+  setSel,
+  allLabel,
+  month,
+  prevMonthKey,
+  prevYear,
+  mm,
+  year,
+  narrow,
+}: {
+  title: string;
+  rows: DayRow[];
+  names: string[];
+  sel: string;
+  setSel: (v: string) => void;
+  allLabel: string;
+  month: string;
+  prevMonthKey: string;
+  prevYear: number;
+  mm: string;
+  year: number;
+  narrow: boolean;
+}) {
+  const data = useMemo(() => {
+    const src = sel ? rows.filter((r) => r.name === sel) : rows;
+    const byDate: Record<string, number> = {};
+    src.forEach((r) => {
+      if (r.d) byDate[r.d] = (byDate[r.d] || 0) + r.amt;
+    });
+    const days = new Date(year, Number(mm), 0).getDate();
+    const out: { day: string; 당월: number; 전월: number; 작년: number }[] = [];
+    for (let d = 1; d <= days; d++) {
+      const dd = String(d).padStart(2, "0");
+      const cur = byDate[`${year}-${mm}-${dd}`] || 0;
+      const pm = byDate[`${prevMonthKey}-${dd}`] || 0;
+      const ly = byDate[`${prevYear}-${mm}-${dd}`] || 0;
+      if (cur || pm || ly) out.push({ day: `${d}일`, 당월: cur, 전월: pm, 작년: ly });
+    }
+    return out;
+  }, [rows, sel, year, mm, prevYear, prevMonthKey]);
+
+  return (
+    <div className="card overflow-hidden min-w-0" style={panelStyle}>
+      <div className="flex items-start justify-between gap-2 flex-wrap mb-4">
+        <h2 className="font-semibold text-slate-100">
+          {title} ({month}){" "}
+          <span className="text-xs font-normal text-slate-400">
+            {sel || allLabel} · vs 전월({prevMonthKey}) · 작년 동월({prevYear}-{mm}) · 단위: 백만원
+          </span>
+        </h2>
+        <select
+          className="input !py-1 !text-xs max-w-[190px] !bg-slate-800 !text-slate-100 !border-slate-600"
+          value={sel}
+          onChange={(e) => setSel(e.target.value)}
+        >
+          <option value="">{allLabel}</option>
+          {names.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+      </div>
+      {data.length === 0 ? (
+        <p className="text-sm text-slate-400">
+          {sel || allLabel} · 해당 월/전월/작년에 매출 데이터가 없습니다.
+        </p>
+      ) : (
+        <div className="w-full max-w-full overflow-x-auto">
+          <div style={{ minWidth: narrow ? Math.max(360, data.length * 62) : undefined }}>
+            <ResponsiveContainer width="100%" height={320}>
+              <BarChart data={data} barCategoryGap="8%" barGap={1} margin={{ top: 24, right: 8 }}>
+                <CartesianGrid strokeDasharray="2 6" stroke={C.grid} vertical={false} />
+                <XAxis
+                  dataKey="day"
+                  tick={axisTick}
+                  axisLine={{ stroke: C.grid }}
+                  tickLine={false}
+                  interval={0}
+                />
+                <YAxis tickFormatter={millTick} width={44} tick={axisTick} axisLine={false} tickLine={false} />
+                <Tooltip
+                  formatter={(v: number) => millTip(v)}
+                  contentStyle={tooltipStyle}
+                  labelStyle={{ color: "#cbd5e1" }}
+                  cursor={{ fill: "rgba(255,255,255,0.06)" }}
+                />
+                <Legend wrapperStyle={{ color: "#cbd5e1", fontSize: 12 }} />
+                <Bar dataKey="작년" fill={C.slate} maxBarSize={18} radius={[3, 3, 0, 0]}>
+                  <LabelList dataKey="작년" position="top" formatter={millLabel} fill="#94a3b8" fontSize={9} />
+                </Bar>
+                <Bar dataKey="전월" fill={C.green} maxBarSize={18} radius={[3, 3, 0, 0]}>
+                  <LabelList dataKey="전월" position="top" formatter={millLabel} fill="#86efac" fontSize={9} />
+                </Bar>
+                <Bar dataKey="당월" fill={C.blue} maxBarSize={18} radius={[3, 3, 0, 0]}>
+                  <LabelList dataKey="당월" position="top" formatter={millLabel} fill="#e0f2fe" fontSize={10} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// 오늘 매출 타일: 금액 + 작년 같은 날 대비 증감률
 function Today({
   title,
   value,
