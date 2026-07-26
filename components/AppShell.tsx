@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "@/lib/actions";
 
 // 각 화면 (모두 클라이언트 컴포넌트)
@@ -57,6 +57,27 @@ const SCREENS: Screen[] = [
 
 const byKey = (k: string) => SCREENS.find((s) => s.key === k)!;
 
+// URL 경로 → 탭 키 (KPI 카드 등 <Link>로 이동해도 해당 탭이 열리도록)
+const PATH_TO_KEY: Record<string, string> = {
+  "/dashboard": "dashboard",
+  "/b2b": "b2b",
+  "/loading": "loading",
+  "/online": "online",
+  "/special": "special",
+  "/crab": "crab",
+  "/export": "export",
+  "/report/b2b": "r-b2b",
+  "/report/mart": "r-mart",
+  "/report/online": "r-online",
+  "/report/special": "r-special",
+  "/report/crab": "r-crab",
+  "/report/export": "r-export",
+  "/master": "master",
+  "/members": "members",
+  "/grades": "grades",
+  "/login-history": "login-history",
+};
+
 export default function AppShell({
   email,
   isAdmin,
@@ -67,6 +88,7 @@ export default function AppShell({
   canEdit: boolean;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   // 열린 탭 (열린 순서 유지) — 화면 상태를 살려두기 위해 언마운트하지 않는다
   const [tabs, setTabs] = useState<string[]>(["dashboard"]);
@@ -77,6 +99,12 @@ export default function AppShell({
     setActive(key);
     setMenuOpen(false);
   }, []);
+
+  // KPI·오늘매출 카드 등 URL 이동(<Link>) 시 해당 탭을 열어 활성화
+  useEffect(() => {
+    const key = PATH_TO_KEY[pathname ?? ""];
+    if (key) openTab(key);
+  }, [pathname, openTab]);
 
   const closeTab = useCallback(
     (key: string, e?: React.MouseEvent) => {
@@ -222,7 +250,7 @@ export default function AppShell({
       {/* 본문: 탭바 + 탭 내용 */}
       <main className="flex-1 min-w-0 w-full flex flex-col">
         {/* 탭바 */}
-        <div className="sticky top-0 z-20 bg-white border-b border-slate-200 overflow-x-auto">
+        <div className="sticky top-12 md:top-0 z-20 bg-white border-b border-slate-200 overflow-x-auto">
           <div className="flex items-stretch gap-1 px-2 pt-2 whitespace-nowrap">
             {tabs.map((k) => {
               const s = byKey(k);
