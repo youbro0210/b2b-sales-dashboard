@@ -85,6 +85,7 @@ export default function DashboardPage() {
   const [b2b, setB2b] = useState<Any[]>([]);
   const [exp, setExp] = useState<Any[]>([]);
   const [load, setLoad] = useState<Any[]>([]);
+  const [crab, setCrab] = useState<Any[]>([]);
   const [month, setMonth] = useState<string>(() => monthKST());
   const [loading, setLoading] = useState(true);
   // 일자별 비교 차트의 선택 채널/고객사 ("" = 전체)
@@ -92,6 +93,7 @@ export default function DashboardPage() {
   const [martChan, setMartChan] = useState<string>("");
   const [onlineChan, setOnlineChan] = useState<string>("");
   const [specialChan, setSpecialChan] = useState<string>("");
+  const [crabChan, setCrabChan] = useState<string>("");
 
   // 좁은 화면(모바일)에서는 차트에 최소 폭을 주고 가로 스크롤시켜
   // 막대/라벨이 겹치지 않게 한다.
@@ -110,6 +112,7 @@ export default function DashboardPage() {
       setB2b(d.b2b as Any[]);
       setExp(d.exp as Any[]);
       setLoad(d.load as Any[]);
+      setCrab(((d as any).crab as Any[]) ?? []);
       setLoading(false);
     })();
   }, []);
@@ -213,6 +216,15 @@ export default function DashboardPage() {
   const martRows = useMemo<DayRow[]>(() => loadRowsOf(G_MART), [load]);
   const onlineRows = useMemo<DayRow[]>(() => loadRowsOf(G_ONLINE), [load]);
   const specialRows = useMemo<DayRow[]>(() => loadRowsOf(G_SPECIAL), [load]);
+  const crabRows = useMemo<DayRow[]>(
+    () =>
+      crab.map((r) => ({
+        d: ymd(r.sale_date),
+        name: String(r.channel_name ?? "").trim() || "(미지정)",
+        amt: num(r.sales_amount),
+      })),
+    [crab]
+  );
 
   const namesOf = (rows: DayRow[]) =>
     Array.from(new Set(rows.map((r) => r.name))).sort((a, b) => a.localeCompare(b));
@@ -220,6 +232,7 @@ export default function DashboardPage() {
   const martNames = useMemo(() => namesOf(martRows), [martRows]);
   const onlineNames = useMemo(() => namesOf(onlineRows), [onlineRows]);
   const specialNames = useMemo(() => namesOf(specialRows), [specialRows]);
+  const crabNames = useMemo(() => namesOf(crabRows), [crabRows]);
 
   // 당월 매출이 가장 높은 날 (막대를 다른 색으로 강조)
   const peakIdx = useMemo(() => {
@@ -540,6 +553,15 @@ export default function DashboardPage() {
             names={specialNames}
             sel={specialChan}
             setSel={setSpecialChan}
+            allLabel="전체 채널"
+          />
+          <DailyCompareCard
+            {...cmp}
+            title="꽃게 일자별 매출"
+            rows={crabRows}
+            names={crabNames}
+            sel={crabChan}
+            setSel={setCrabChan}
             allLabel="전체 채널"
           />
         </>
