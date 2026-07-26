@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import { getSessionUser } from "@/lib/session-user";
-import Sidebar from "@/components/Sidebar";
+import AppShell from "@/components/AppShell";
 import LogoutButton from "@/components/LogoutButton";
 
 export default async function AppLayout({
@@ -27,20 +26,12 @@ export default async function AppLayout({
     );
   }
 
-  const path = headers().get("x-pathname") || "";
-  const adminPaths = ["/master", "/members", "/grades", "/login-history"];
-  const editPaths = ["/b2b", "/loading", "/online", "/special", "/export"];
-  const match = (list: string[]) =>
-    list.some((p) => path === p || path.startsWith(p + "/"));
-  if (match(adminPaths) && !user.isAdmin) redirect("/dashboard");
-  if (match(editPaths) && !user.canEdit && !user.isAdmin) redirect("/dashboard");
-
+  // 모든 화면을 탭으로 띄우는 셸. 개별 라우트(children)는 사용하지 않는다.
   return (
-    <div className="flex min-h-screen flex-col md:flex-row">
-      <Sidebar email={user.email} isAdmin={user.isAdmin} canEdit={user.canEdit} />
-      {/* overflow-x-auto 를 두면 차트 폭 계산이 어긋나고 하단 여백이 생긴다.
-          가로 스크롤이 필요한 표는 각 카드에서 개별로 처리한다. */}
-      <main className="flex-1 min-w-0 w-full p-4 pb-8 md:p-8">{children}</main>
-    </div>
+    <AppShell
+      email={user.email}
+      isAdmin={user.isAdmin}
+      canEdit={user.canEdit}
+    />
   );
 }
