@@ -17,6 +17,7 @@ const editNav: NavRow[] = [
   { href: "/loading", label: "B2C 오프라인", icon: "🏬" },
   { href: "/online", label: "B2C 온라인", icon: "🛒" },
   { href: "/special", label: "특정", icon: "📦" },
+  { href: "/crab", label: "꽃게", icon: "🦀" },
   { href: "/export", label: "수출대장", icon: "🌏" },
 ];
 // 현황: 모든 승인 사용자
@@ -26,6 +27,7 @@ const reportNav: NavRow[] = [
   { href: "/report/mart", label: "B2C 오프라인 현황", icon: "📈" },
   { href: "/report/online", label: "B2C 온라인 현황", icon: "📈" },
   { href: "/report/special", label: "특정 현황", icon: "📈" },
+  { href: "/report/crab", label: "꽃게 현황", icon: "📈" },
   { href: "/report/export", label: "수출대장 현황", icon: "📈" },
 ];
 // 관리(설정): 관리자만
