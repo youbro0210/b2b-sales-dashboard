@@ -313,10 +313,11 @@ export default function DashboardPage() {
       ...b2b.map((r) => monthKey(r.sale_date)),
       ...exp.map((r) => monthKey(r.delivery_date ?? "")),
       ...load.map((r) => monthKey(r.load_date)),
+      ...crab.map((r) => monthKey(r.sale_date)),
     ].forEach((m) => m && set.add(m));
     set.add(month);
     return Array.from(set).sort().reverse();
-  }, [b2b, exp, load, month]);
+  }, [b2b, exp, load, crab, month]);
 
   // 부문별 차트 공통 props
   const cmp = { month, prevMonthKey, prevYear, mm, year, narrow };
