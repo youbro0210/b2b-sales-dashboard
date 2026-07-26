@@ -53,6 +53,12 @@ export default function LoadingReport({
     return m;
   }, [channels]);
 
+  const orderOf = useMemo(() => {
+    const m = new Map<number, number>();
+    channels.forEach((c, i) => m.set(c.id, Number(c.sort_order ?? i)));
+    return m;
+  }, [channels]);
+
   const fetchRows = useCallback(async () => {
     if (from > to) return;
     setLoading(true);
@@ -62,13 +68,13 @@ export default function LoadingReport({
     data.sort(
       (a, b) =>
         ymd(a.load_date).localeCompare(ymd(b.load_date)) ||
-        (nameOf.get(a.channel_id) || "").localeCompare(nameOf.get(b.channel_id) || "")
+        (orderOf.get(a.channel_id) ?? 9999) - (orderOf.get(b.channel_id) ?? 9999)
     );
     setRows(data);
     setPage(0);
     setSearched(true);
     setLoading(false);
-  }, [from, to, chan, allowIds, nameOf]);
+  }, [from, to, chan, allowIds, nameOf, orderOf]);
 
   const total = rows.reduce((s, r) => s + num(r.supply_amount), 0);
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE));
