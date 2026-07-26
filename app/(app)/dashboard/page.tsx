@@ -54,11 +54,11 @@ const num = (v: any) => Number(v ?? 0);
 const C = {
   panel: "#0A2540",
   grid: "#1e3a52",
-  axis: "#fca5a5",
-  blue: "#22c55e",
+  axis: "#86efac",
+  blue: "#ef4444",
   green: "#facc15",
   amber: "#fbbf24",
-  slate: "#ef4444",
+  slate: "#22c55e",
 };
 const panelStyle = { background: C.panel, borderColor: C.panel } as const;
 const tooltipStyle = {
@@ -439,7 +439,7 @@ export default function DashboardPage() {
                       />
                       <Legend wrapperStyle={{ color: "#cbd5e1", fontSize: 12 }} />
                       <Bar dataKey="작년" fill={C.slate} maxBarSize={18} radius={[3, 3, 0, 0]}>
-                        <LabelList dataKey="작년" position="top" formatter={millLabel} fill="#fca5a5" fontSize={9} />
+                        <LabelList dataKey="작년" position="top" formatter={millLabel} fill="#86efac" fontSize={9} />
                       </Bar>
                       <Bar dataKey="전월" fill={C.green} maxBarSize={18} radius={[3, 3, 0, 0]}>
                         <LabelList dataKey="전월" position="top" formatter={millLabel} fill="#fde047" fontSize={9} />
@@ -448,7 +448,7 @@ export default function DashboardPage() {
                         {daily.map((_, i) => (
                           <Cell key={i} fill={i === peakIdx ? C.amber : C.blue} />
                         ))}
-                        <LabelList dataKey="당월" position="top" formatter={millLabel} fill="#e0f2fe" fontSize={10} />
+                        <LabelList dataKey="당월" position="top" formatter={millLabel} fill="#fca5a5" fontSize={10} />
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
@@ -501,7 +501,7 @@ export default function DashboardPage() {
                       dot={{ r: 2 }}
                       activeDot={{ r: 5 }}
                     >
-                      <LabelList dataKey="작년" position="bottom" formatter={millLabel} fill="#fca5a5" fontSize={10} />
+                      <LabelList dataKey="작년" position="bottom" formatter={millLabel} fill="#86efac" fontSize={10} />
                     </Line>
                     <Line
                       type="monotone"
@@ -511,7 +511,7 @@ export default function DashboardPage() {
                       dot={{ r: 3 }}
                       activeDot={{ r: 6 }}
                     >
-                      <LabelList dataKey="올해" position="top" formatter={millLabel} fill="#e0f2fe" fontSize={10} />
+                      <LabelList dataKey="올해" position="top" formatter={millLabel} fill="#fca5a5" fontSize={10} />
                     </Line>
                   </LineChart>
                 </ResponsiveContainer>
@@ -663,13 +663,13 @@ function DailyCompareCard({
                 />
                 <Legend wrapperStyle={{ color: "#cbd5e1", fontSize: 12 }} />
                 <Bar dataKey="작년" fill={C.slate} maxBarSize={18} radius={[3, 3, 0, 0]}>
-                  <LabelList dataKey="작년" position="top" formatter={millLabel} fill="#fca5a5" fontSize={9} />
+                  <LabelList dataKey="작년" position="top" formatter={millLabel} fill="#86efac" fontSize={9} />
                 </Bar>
                 <Bar dataKey="전월" fill={C.green} maxBarSize={18} radius={[3, 3, 0, 0]}>
                   <LabelList dataKey="전월" position="top" formatter={millLabel} fill="#fde047" fontSize={9} />
                 </Bar>
                 <Bar dataKey="당월" fill={C.blue} maxBarSize={18} radius={[3, 3, 0, 0]}>
-                  <LabelList dataKey="당월" position="top" formatter={millLabel} fill="#e0f2fe" fontSize={10} />
+                  <LabelList dataKey="당월" position="top" formatter={millLabel} fill="#fca5a5" fontSize={10} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -723,11 +723,11 @@ function Today({
       </div>
       <div className="mt-1 text-[11px] tabular-nums">
         {diff === null ? (
-          <span style={{ color: accent ? "#99f6e4" : "#fca5a5" }}>작년 기록 없음</span>
+          <span style={{ color: accent ? "#99f6e4" : "#86efac" }}>작년 기록 없음</span>
         ) : (
           <span style={{ color: accent ? "#ccfbf1" : up ? "#16a34a" : "#dc2626" }}>
             {up ? "▲" : "▼"} {Math.abs(diff).toFixed(1)}%{" "}
-            <span style={{ color: accent ? "#99f6e4" : "#fca5a5" }}>vs 작년</span>
+            <span style={{ color: accent ? "#99f6e4" : "#86efac" }}>vs 작년</span>
           </span>
         )}
       </div>
@@ -753,7 +753,7 @@ function Kpi({
     <>
       <div className="flex items-center justify-between">
         <div className="text-[11px] sm:text-xs leading-tight" style={{ color: accent ? "#e0f2fe" : "#64748b" }}>{title}</div>
-        {href && <span className="text-slate-300 text-xs leading-none" style={{ color: accent ? "#e0f2fe" : "#fca5a5" }}>›</span>}
+        {href && <span className="text-slate-300 text-xs leading-none" style={{ color: accent ? "#e0f2fe" : "#86efac" }}>›</span>}
       </div>
       <div
         className="text-base sm:text-xl font-bold mt-1.5 sm:mt-2 leading-tight tabular-nums break-keep"
