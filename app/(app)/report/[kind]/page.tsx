@@ -4,6 +4,7 @@ import B2bReport from "@/components/B2bReport";
 import LoadingReport from "@/components/LoadingReport";
 import ExportReport from "@/components/ExportReport";
 import SpecialMatrix from "@/components/SpecialMatrix";
+import CrabReport from "@/components/CrabReport";
 
 // 마트 = 오프라인 + 수수료업체
 const MART = ["오프라인", "롯데마트_수수료업체", "이마트_수수료업체"];
@@ -20,6 +21,8 @@ export default function ReportPage({ params }: { params: { kind: string } }) {
       return <SpecialMatrix readOnly />;
     case "export":
       return <ExportReport />;
+    case "crab":
+      return <CrabReport />;
     default:
       return <div className="text-slate-500">알 수 없는 현황입니다.</div>;
   }
