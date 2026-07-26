@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   listCustomers, addCustomer, deleteCustomer,
   listCountries, addCountry, deleteCountry,
@@ -153,10 +153,12 @@ function Channels() {
   );
 }
 
-// B2C 오프라인 채널 표시 순서 지정 (▲▼)
+// B2C 오프라인 채널 표시 순서 지정 (마우스 드래그)
 function ChannelOrder() {
   const [rows, setRows] = useState<any[]>([]);
   const [busy, setBusy] = useState(false);
+  const dragIdx = useRef<number | null>(null);
+  const [overIdx, setOverIdx] = useState<number | null>(null);
 
   const load = () =>
     listChannels().then((d) => {
@@ -170,35 +172,42 @@ function ChannelOrder() {
     });
   useEffect(() => { load(); }, []);
 
-  const move = async (i: number, dir: -1 | 1) => {
-    const j = i + dir;
-    if (j < 0 || j >= rows.length || busy) return;
-    const next = [...rows];
-    [next[i], next[j]] = [next[j], next[i]];
-    setRows(next);
+  const persist = async (arr: any[]) => {
     setBusy(true);
     try {
-      await reorderChannels(next.map((r) => Number(r.id)));
+      await reorderChannels(arr.map((r) => Number(r.id)));
     } finally {
       setBusy(false);
       load();
     }
   };
 
+  const drop = (to: number) => {
+    const from = dragIdx.current;
+    dragIdx.current = null;
+    setOverIdx(null);
+    if (from === null || from === to) return;
+    const next = [...rows];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    setRows(next);
+    persist(next);
+  };
+
   return (
     <Section
       form={
         <span className="text-sm text-slate-500">
-          B2C 오프라인 채널의 표시 순서를 ▲▼로 조정하세요. 입력·현황·대시보드에 바로 반영됩니다.
+          행을 <b>마우스로 끌어</b> 원하는 위치에 놓으면 순서가 바뀝니다. 입력·현황·대시보드에 바로 반영됩니다.
         </span>
       }
     >
-      <table className="data">
+      <table className="data select-none">
         <thead>
           <tr>
+            <th style={{ width: 40 }}></th>
             <th style={{ width: 60 }}>순서</th>
             <th>채널명</th>
-            <th style={{ width: 140 }}>이동</th>
           </tr>
         </thead>
         <tbody>
@@ -210,27 +219,18 @@ function ChannelOrder() {
             </tr>
           )}
           {rows.map((r, i) => (
-            <tr key={r.id}>
+            <tr
+              key={r.id}
+              draggable={!busy}
+              onDragStart={() => { dragIdx.current = i; }}
+              onDragOver={(e) => { e.preventDefault(); if (overIdx !== i) setOverIdx(i); }}
+              onDrop={() => drop(i)}
+              onDragEnd={() => { dragIdx.current = null; setOverIdx(null); }}
+              className={`cursor-move transition ${overIdx === i ? "bg-sky-100" : "hover:bg-slate-50"}`}
+            >
+              <td className="text-slate-400 text-center" title="드래그">⠿</td>
               <td className="text-slate-400 tabular-nums">{i + 1}</td>
               <td className="font-medium">{r.name}</td>
-              <td>
-                <button
-                  className="btn-ghost !py-1 !px-2 mr-1"
-                  disabled={busy || i === 0}
-                  onClick={() => move(i, -1)}
-                  aria-label="위로"
-                >
-                  ▲
-                </button>
-                <button
-                  className="btn-ghost !py-1 !px-2"
-                  disabled={busy || i === rows.length - 1}
-                  onClick={() => move(i, 1)}
-                  aria-label="아래로"
-                >
-                  ▼
-                </button>
-              </td>
             </tr>
           ))}
         </tbody>
