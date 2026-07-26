@@ -274,6 +274,16 @@ export async function deleteChannel(id: number) {
   await sql`delete from channels where id = ${id}`;
 }
 
+export async function reorderChannels(orderedIds: number[]) {
+  await requireUser();
+  if (!orderedIds.length) return;
+  const rows = (await sql`select id, sort_order from channels where id = any(${orderedIds}::bigint[])`) as any[];
+  const slots = rows.map((r) => Number(r.sort_order)).sort((a, b) => a - b);
+  for (let i = 0; i < orderedIds.length; i++) {
+    await sql`update channels set sort_order = ${slots[i]} where id = ${orderedIds[i]}`;
+  }
+}
+
 // ----------------- 서버 기준 오늘 날짜 -----------------
 
 // 기기(브라우저) 시계는 틀릴 수 있으므로, 오늘 날짜는 서버 시각을
