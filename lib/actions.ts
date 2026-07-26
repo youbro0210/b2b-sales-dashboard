@@ -612,7 +612,82 @@ export async function bulkSaveExport(
   }
 }
 
+// ----------------- 꽃게 (활꽃게 일자별) -----------------
+
+export async function listCrabRange(from: string, to: string) {
+  await requireUser();
+  try {
+    return await sql`select * from crab_sales
+                     where sale_date >= ${from} and sale_date <= ${to}
+                     order by sale_date, id`;
+  } catch {
+    return [];
+  }
+}
+
+export async function bulkSaveCrab(
+  rows: {
+    sale_date: string;
+    channel_name: string;
+    box_qty: number;
+    buy_price: number;
+    supply_price: number;
+    sales_amount: number;
+    profit_amount: number;
+  }[]
+): Promise<{ ok: boolean; count: number; error?: string }> {
+  try {
+    await requireUser();
+    await sql`create table if not exists crab_sales (
+      id bigserial primary key,
+      sale_date date not null,
+      channel_name text not null,
+      box_qty numeric default 0,
+      buy_price numeric default 0,
+      supply_price numeric default 0,
+      sales_amount numeric default 0,
+      profit_amount numeric default 0
+    )`;
+    const valid = rows.filter((r) => r.sale_date && String(r.channel_name || "").trim());
+    const dates = Array.from(new Set(valid.map((r) => r.sale_date)));
+    const chans = Array.from(new Set(valid.map((r) => String(r.channel_name).trim())));
+    if (dates.length && chans.length) {
+      await sql`delete from crab_sales
+                where sale_date = any(${dates}::date[])
+                  and channel_name = any(${chans}::text[])`;
+    }
+    const ins = valid
+      .map((r) => ({
+        d: r.sale_date,
+        c: String(r.channel_name).trim(),
+        b: Number(r.box_qty) || 0,
+        bp: Number(r.buy_price) || 0,
+        sp: Number(r.supply_price) || 0,
+        s: Number(r.sales_amount) || 0,
+        p: Number(r.profit_amount) || 0,
+      }))
+      .filter((x) => x.b || x.bp || x.sp || x.s || x.p);
+    if (ins.length) {
+      await sql`insert into crab_sales
+        (sale_date, channel_name, box_qty, buy_price, supply_price, sales_amount, profit_amount)
+        select * from unnest(
+          ${ins.map((x) => x.d)}::date[],
+          ${ins.map((x) => x.c)}::text[],
+          ${ins.map((x) => x.b)}::numeric[],
+          ${ins.map((x) => x.bp)}::numeric[],
+          ${ins.map((x) => x.sp)}::numeric[],
+          ${ins.map((x) => x.s)}::numeric[],
+          ${ins.map((x) => x.p)}::numeric[]
+        )`;
+    }
+    return { ok: true, count: ins.length };
+  } catch (e: any) {
+    return { ok: false, count: 0, error: e?.message ?? "저장 실패" };
+  }
+}
+
 // ----------------- 대시보드 -----------------
+
 
 export async function dashboardData() {
   await requireUser();
@@ -635,5 +710,10 @@ export async function dashboardData() {
     group_name: gmap.get(String(r.channel_id)) ?? null,
   }));
 
-  return { b2b, exp, load };
+  let crab: any[] = [];
+  try {
+    crab = (await sql`select sale_date, channel_name, sales_amount, profit_amount from crab_sales`) as any[];
+  } catch {}
+
+  return { b2b, exp, load, crab };
 }
