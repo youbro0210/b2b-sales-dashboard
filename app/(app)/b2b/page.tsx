@@ -58,7 +58,7 @@ export default function B2bPage() {
         customer_name: r.customer_name ?? "",
         mfg_cost: num(r.mfg_cost),
         sales_amount: num(r.sales_amount),
-        profit_amount: num(r.profit_amount),
+        profit_amount: num(r.sales_amount) - num(r.mfg_cost),
         note: r.note ?? "",
       }))
     );
@@ -224,9 +224,9 @@ export default function B2bPage() {
                         ))}
                       </select>
                     </td>
-                    <td><NumberInput value={r.mfg_cost} onChange={(v) => update(r._key, { mfg_cost: v })} /></td>
-                    <td><NumberInput value={r.sales_amount} onChange={(v) => update(r._key, { sales_amount: v })} /></td>
-                    <td><NumberInput value={r.profit_amount} onChange={(v) => update(r._key, { profit_amount: v })} /></td>
+                    <td><NumberInput value={r.mfg_cost} onChange={(v) => update(r._key, { mfg_cost: v, profit_amount: num(r.sales_amount) - v })} /></td>
+                    <td><NumberInput value={r.sales_amount} onChange={(v) => update(r._key, { sales_amount: v, profit_amount: v - num(r.mfg_cost) })} /></td>
+                    <td className="text-right tabular-nums text-slate-700 pr-2 bg-slate-50">{fmt(num(r.profit_amount))}</td>
                     <td className="text-right text-slate-500">{rr}%</td>
                     <td>
                       <input
