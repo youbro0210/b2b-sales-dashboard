@@ -412,7 +412,7 @@ export default function DashboardPage() {
                 </span>
               </h2>
               <span className="text-[11px] text-slate-400">
-                <span style={{ color: "#ea580c" }}>■</span> 최고 매출일 · 단위: 백만원
+                <span style={{ color: "#1d4ed8" }}>■</span> 최고 매출일 · 단위: 백만원
               </span>
             </div>
             {daily.length === 0 ? (
@@ -446,7 +446,7 @@ export default function DashboardPage() {
                       </Bar>
                       <Bar dataKey="당월" fill={C.blue} maxBarSize={18} radius={[3, 3, 0, 0]}>
                         {daily.map((_, i) => (
-                          <Cell key={i} fill={i === peakIdx ? "#ea580c" : C.blue} />
+                          <Cell key={i} fill={i === peakIdx ? "#1d4ed8" : C.blue} />
                         ))}
                         <LabelList dataKey="당월" position="top" formatter={millLabel} fill="#fca5a5" fontSize={10} />
                       </Bar>
