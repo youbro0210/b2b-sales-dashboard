@@ -2,10 +2,10 @@
 
 import { useRef, useState } from "react";
 import * as XLSX from "xlsx";
-import { bulkSaveB2b, bulkSaveLoading, bulkSaveExport } from "@/lib/actions";
+import { bulkSaveB2b, bulkSaveLoading, bulkSaveExport, bulkSaveCrab } from "@/lib/actions";
 import { todayKST } from "@/lib/types";
 
-type Kind = "b2b" | "loading" | "export";
+type Kind = "b2b" | "loading" | "export" | "crab";
 
 const TEMPLATES: Record<Kind, { file: string; headers: string[]; example: any[] }> = {
   b2b: {
@@ -17,6 +17,11 @@ const TEMPLATES: Record<Kind, { file: string; headers: string[]; example: any[] 
     file: "상차금액_업로드양식.xlsx",
     headers: ["일자", "구분", "채널명", "공급가액"],
     example: ["2026-06-01", "오프라인", "코스트코", 1000000],
+  },
+  crab: {
+    file: "꽃게_업로드양식.xlsx",
+    headers: ["일자", "채널명", "BOX수", "매입가", "납품가", "매출액", "이익액"],
+    example: ["2025-09-01", "롯데마트", 2198, 26855, 26006, 57161188, -1866102],
   },
   export: {
     file: "수출대장_업로드양식.xlsx",
@@ -164,6 +169,19 @@ export default function ExcelBox({
           }))
           .filter((r) => r.load_date);
         res = await bulkSaveLoading(rows);
+      } else if (kind === "crab") {
+        const rows = json
+          .map((r) => ({
+            sale_date: toDate(r["일자"]),
+            channel_name: String(r["채널명"] ?? "").trim(),
+            box_qty: num(r["BOX수"]),
+            buy_price: num(r["매입가"] ?? r["구입가"]),
+            supply_price: num(r["납품가"]),
+            sales_amount: num(r["매출액"]),
+            profit_amount: num(r["이익액"]),
+          }))
+          .filter((r) => r.sale_date && r.channel_name);
+        res = await bulkSaveCrab(rows);
       } else {
         const rows = json
           .map((r) => ({
