@@ -28,6 +28,7 @@ export default function B2bReport() {
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(0);
   const [searched, setSearched] = useState(false);
+  const [detail, setDetail] = useState<Group | null>(null); // 세부 내역 팝업 대상
 
   useEffect(() => {
     listCustomers(["b2b", "both"]).then((d) => setCustomers(d as any[]));
@@ -38,7 +39,9 @@ export default function B2bReport() {
     if (from > to) return;
     setLoading(true);
     let data = (await listB2bRange(from, to)) as any[];
-    if (cust) data = data.filter((r) => (r.customer_name || "") === cust);
+    // 고객사 검색: 직접 입력한 글자가 포함된 거래처만 (부분 일치)
+    const q = cust.trim().toLowerCase();
+    if (q) data = data.filter((r) => (r.customer_name || "").toLowerCase().includes(q));
     // 거래처(고객사) 기준으로 모으고, 같은 거래처 안에서는 일자순
     data.sort(
       (a, b) =>
@@ -116,16 +119,21 @@ export default function B2bReport() {
   };
 
   const filter = (
-    <select
-      className="input max-w-[170px]"
-      value={cust}
-      onChange={(e) => setCust(e.target.value)}
-    >
-      <option value="">전체 고객사</option>
-      {customers.map((c) => (
-        <option key={c.id} value={c.name}>{c.name}</option>
-      ))}
-    </select>
+    <>
+      <input
+        list="b2b-cust-options"
+        className="input max-w-[200px]"
+        placeholder="고객사명 입력 (비우면 전체)"
+        value={cust}
+        onChange={(e) => setCust(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && fetchRows()}
+      />
+      <datalist id="b2b-cust-options">
+        {customers.map((c) => (
+          <option key={c.id} value={c.name} />
+        ))}
+      </datalist>
+    </>
   );
 
   return (
@@ -183,9 +191,16 @@ export default function B2bReport() {
                           {i === 0 && (
                             <td
                               rowSpan={g.rows.length + 1}
-                              className="align-top font-medium bg-slate-50 whitespace-nowrap"
+                              className="align-top bg-slate-50 whitespace-nowrap"
                             >
-                              {g.name}
+                              <button
+                                type="button"
+                                onClick={() => setDetail(g)}
+                                className="font-medium text-sky-700 hover:underline text-left"
+                                title="세부 내역 보기"
+                              >
+                                {g.name} 🔍
+                              </button>
                             </td>
                           )}
                           <td className="whitespace-nowrap">{ymd(r.sale_date)}</td>
@@ -245,6 +260,81 @@ export default function B2bReport() {
           </>
         )}
       </div>
+
+      {detail && <DetailModal group={detail} onClose={() => setDetail(null)} />}
     </ReportShell>
+  );
+}
+
+// 고객사 세부 내역 팝업 (일자별 전체 내역 + 소계)
+function DetailModal({ group, onClose }: { group: Group; onClose: () => void }) {
+  const rate = group.sales ? ((group.profit / group.sales) * 100).toFixed(1) : "0.0";
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div className="absolute inset-0 bg-black/40" />
+      <div
+        className="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b">
+          <div>
+            <h3 className="font-bold text-lg">{group.name}</h3>
+            <p className="text-xs text-slate-500">세부 내역 · {group.rows.length}건</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-700 text-2xl leading-none"
+            aria-label="닫기"
+          >
+            ×
+          </button>
+        </div>
+        <div className="p-4 overflow-auto">
+          <table className="data celled text-sm">
+            <thead>
+              <tr>
+                <th className="whitespace-nowrap">일자</th>
+                <th className="text-right">제조원가</th>
+                <th className="text-right">매출액</th>
+                <th className="text-right">매출이익액</th>
+                <th className="text-right">이익율</th>
+                <th>비고</th>
+              </tr>
+            </thead>
+            <tbody>
+              {group.rows.map((r) => {
+                const sales = num(r.sales_amount);
+                const rr = sales
+                  ? ((num(r.profit_amount) / sales) * 100).toFixed(1)
+                  : "0.0";
+                return (
+                  <tr key={r.id}>
+                    <td className="whitespace-nowrap">{ymd(r.sale_date)}</td>
+                    <td className="text-right tabular-nums">{fmt(num(r.mfg_cost))}</td>
+                    <td className="text-right tabular-nums">{fmt(sales)}</td>
+                    <td className="text-right tabular-nums">{fmt(num(r.profit_amount))}</td>
+                    <td className="text-right text-slate-500">{rr}%</td>
+                    <td className="text-slate-500">{r.note}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr className="font-semibold bg-slate-50">
+                <td>소계</td>
+                <td className="text-right tabular-nums">{fmt(group.mfg)}</td>
+                <td className="text-right tabular-nums">{fmt(group.sales)}</td>
+                <td className="text-right tabular-nums">{fmt(group.profit)}</td>
+                <td className="text-right">{rate}%</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
   );
 }
