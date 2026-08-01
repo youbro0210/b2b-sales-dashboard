@@ -1,15 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import ReportShell from "@/components/ReportShell";
-import { fmt, fmtInt, ymd, todayKST } from "@/lib/types";
+import { fmt, ymd, todayKST } from "@/lib/types";
 import { listExportRange, listCustomers } from "@/lib/actions";
 
 const num = (v: any) => Number(v ?? 0);
-const PAGE = 20;
+const PAGE = 20; // 페이지당 고객사 수
 
-// 수출대장 현황 (조회 전용 + 고객사 필터 + 페이징 + 엑셀 다운로드)
+type Group = { name: string; rows: any[]; sales: number; cost: number };
+
+// 수출대장 현황: 고객사별 합계 + 누계를 먼저 보여주고, 고객사명 클릭 시 세부 내역 팝업
 export default function ExportReport() {
   const today = todayKST();
   const [from, setFrom] = useState(today);
@@ -20,6 +22,7 @@ export default function ExportReport() {
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(0);
   const [searched, setSearched] = useState(false);
+  const [detail, setDetail] = useState<Group | null>(null);
 
   useEffect(() => {
     listCustomers(["export", "both"]).then((d) => setCustomers(d as any[]));
@@ -29,59 +32,97 @@ export default function ExportReport() {
     if (from > to) return;
     setLoading(true);
     let data = (await listExportRange(from, to)) as any[];
-    if (cust) data = data.filter((r) => (r.customer_name || "") === cust);
+    const q = cust.trim().toLowerCase();
+    if (q) data = data.filter((r) => (r.customer_name || "").toLowerCase().includes(q));
+    data.sort(
+      (a, b) =>
+        (a.customer_name || "").localeCompare(b.customer_name || "") ||
+        ymd(a.delivery_date).localeCompare(ymd(b.delivery_date))
+    );
     setRows(data);
     setPage(0);
     setSearched(true);
     setLoading(false);
   }, [from, to, cust]);
 
-  const total = rows.reduce((s, r) => s + num(r.sales_total), 0);
-  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE));
-  const pageRows = rows.slice(page * PAGE, (page + 1) * PAGE);
+  // 고객사별 그룹
+  const gps = useMemo<Group[]>(() => {
+    const g: Group[] = [];
+    let cur: Group | null = null;
+    for (const r of rows) {
+      const nm = r.customer_name || "(미지정)";
+      if (!cur || nm !== cur.name) {
+        cur = { name: nm, rows: [], sales: 0, cost: 0 };
+        g.push(cur);
+      }
+      cur.rows.push(r);
+      cur.sales += num(r.sales_total);
+      cur.cost += num(r.mfg_cost_total);
+    }
+    return g;
+  }, [rows]);
+
+  const t = rows.reduce(
+    (a, r) => ({
+      sales: a.sales + num(r.sales_total),
+      cost: a.cost + num(r.mfg_cost_total),
+    }),
+    { sales: 0, cost: 0 }
+  );
+
+  const gpsCum = useMemo(() => {
+    let run = 0;
+    return gps.map((g) => {
+      run += g.sales;
+      return { g, cum: run };
+    });
+  }, [gps]);
+
+  const pageCount = Math.max(1, Math.ceil(gps.length / PAGE));
+  const pageGps = gpsCum.slice(page * PAGE, (page + 1) * PAGE);
 
   const download = () => {
-    const aoa = [
-      [
-        "납기일", "공급구분", "고객사명", "수출국가", "품명", "단위",
-        "매출액/단위", "수량(단위)", "수량(박스)", "매출 계", "제조원가 계", "물류비",
-        "환율", "대분류", "정부지원사업",
-      ],
-      ...rows.map((r) => [
-        ymd(r.delivery_date),
-        r.supply_type,
-        r.customer_name,
-        r.country_name,
-        r.product_name,
-        r.unit,
-        num(r.sales_per_unit),
-        num(r.qty_unit),
-        num(r.qty_box),
-        num(r.sales_total),
-        num(r.mfg_cost_total),
-        num(r.logistics_cost),
-        num(r.exchange_rate),
-        r.category,
-        r.gov_support,
-      ]),
-      ["합계", "", "", "", "", "", "", "", "", total, "", "", "", "", ""],
+    const aoa: any[] = [
+      ["고객사", "납기일", "구분", "국가", "품명", "수량(단위)", "매출 계", "원가 계", "환율"],
     ];
+    gps.forEach((g) => {
+      g.rows.forEach((r) =>
+        aoa.push([
+          g.name,
+          ymd(r.delivery_date),
+          r.supply_type ?? "",
+          r.country_name ?? "",
+          r.product_name ?? "",
+          num(r.qty_unit),
+          num(r.sales_total),
+          num(r.mfg_cost_total),
+          num(r.exchange_rate),
+        ])
+      );
+      aoa.push([`${g.name} 소계`, "", "", "", "", "", g.sales, g.cost, ""]);
+    });
+    aoa.push(["합계", "", "", "", "", "", t.sales, t.cost, ""]);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), "현황");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), "수출대장현황");
     XLSX.writeFile(wb, `수출대장현황_${from}_${to}.xlsx`);
   };
 
   const filter = (
-    <select
-      className="input max-w-[170px]"
-      value={cust}
-      onChange={(e) => setCust(e.target.value)}
-    >
-      <option value="">전체 고객사</option>
-      {customers.map((c) => (
-        <option key={c.id} value={c.name}>{c.name}</option>
-      ))}
-    </select>
+    <>
+      <input
+        list="export-cust-options"
+        className="input max-w-[200px]"
+        placeholder="고객사명 입력 (비우면 전체)"
+        value={cust}
+        onChange={(e) => setCust(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && fetchRows()}
+      />
+      <datalist id="export-cust-options">
+        {customers.map((c) => (
+          <option key={c.id} value={c.name} />
+        ))}
+      </datalist>
+    </>
   );
 
   return (
@@ -94,12 +135,15 @@ export default function ExportReport() {
       onSearch={fetchRows}
       onDownload={download}
       loading={loading}
-      count={rows.length}
+      count={gps.length}
       extraFilter={filter}
     >
       <div className="card overflow-x-auto">
         <div className="mb-3">
-          <h2 className="font-semibold">수출 내역</h2>
+          <h2 className="font-semibold">수출대장 · 고객사별 매출</h2>
+          <p className="text-xs text-slate-500">
+            고객사명을 클릭하면 세부 내역이 팝업으로 열립니다.
+          </p>
         </div>
         {loading ? (
           <p className="text-slate-500">불러오는 중...</p>
@@ -110,54 +154,50 @@ export default function ExportReport() {
             <table className="data celled">
               <thead>
                 <tr>
-                  <th>납기일</th>
-                  <th>구분</th>
-                  <th>고객사</th>
-                  <th>국가</th>
-                  <th>품명</th>
-                  <th className="text-right">수량(단위)</th>
+                  <th style={{ minWidth: 160 }}>고객사</th>
                   <th className="text-right">매출 계</th>
                   <th className="text-right">원가 계</th>
-                  <th className="text-right">환율</th>
+                  <th className="text-right">누계매출계</th>
                 </tr>
               </thead>
               <tbody>
-                {rows.length === 0 && (
+                {gps.length === 0 && (
                   <tr>
-                    <td colSpan={9} className="text-center text-slate-400 py-6">
+                    <td colSpan={4} className="text-center text-slate-400 py-6">
                       조회된 데이터가 없습니다.
                     </td>
                   </tr>
                 )}
-                {pageRows.map((r) => (
-                  <tr key={r.id}>
-                    <td className="whitespace-nowrap">{ymd(r.delivery_date)}</td>
-                    <td>{r.supply_type}</td>
-                    <td>{r.customer_name}</td>
-                    <td>{r.country_name}</td>
-                    <td>{r.product_name}</td>
-                    <td className="text-right tabular-nums">{fmtInt(num(r.qty_unit))}</td>
-                    <td className="text-right tabular-nums">
-                      {fmt(num(r.sales_total), r.country_name === "일본" ? 4 : 2)}
+                {pageGps.map(({ g, cum }) => (
+                  <tr key={g.name} className="hover:bg-sky-50">
+                    <td className="whitespace-nowrap">
+                      <button
+                        type="button"
+                        onClick={() => setDetail(g)}
+                        className="font-medium text-sky-700 hover:underline text-left"
+                        title="세부 내역 보기"
+                      >
+                        {g.name} 🔍
+                      </button>
                     </td>
-                    <td className="text-right tabular-nums">
-                      {fmt(num(r.mfg_cost_total), r.country_name === "일본" ? 4 : 2)}
-                    </td>
-                    <td className="text-right tabular-nums">{r.exchange_rate}</td>
+                    <td className="text-right tabular-nums">{fmt(g.sales)}</td>
+                    <td className="text-right tabular-nums">{fmt(g.cost)}</td>
+                    <td className="text-right tabular-nums text-slate-500">{fmt(cum)}</td>
                   </tr>
                 ))}
               </tbody>
-              {rows.length > 0 && (
+              {gps.length > 0 && (
                 <tfoot>
                   <tr className="font-semibold bg-slate-50">
-                    <td colSpan={6}>합계</td>
-                    <td className="text-right">{fmt(total)}</td>
-                    <td colSpan={2}></td>
+                    <td>합계</td>
+                    <td className="text-right">{fmt(t.sales)}</td>
+                    <td className="text-right">{fmt(t.cost)}</td>
+                    <td></td>
                   </tr>
                 </tfoot>
               )}
             </table>
-            {rows.length > PAGE && (
+            {gps.length > PAGE && (
               <div className="flex items-center justify-center gap-2 mt-3 text-sm">
                 <button
                   className="btn-ghost !py-1 !px-3"
@@ -179,6 +219,78 @@ export default function ExportReport() {
           </>
         )}
       </div>
+
+      {detail && <DetailModal group={detail} onClose={() => setDetail(null)} />}
     </ReportShell>
+  );
+}
+
+// 고객사 세부 내역 팝업 (수출대장 라인 항목)
+function DetailModal({ group, onClose }: { group: Group; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div className="absolute inset-0 bg-black/40" />
+      <div
+        className="relative bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b">
+          <div>
+            <h3 className="font-bold text-lg">{group.name}</h3>
+            <p className="text-xs text-slate-500">세부 내역 · {group.rows.length}건</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-700 text-2xl leading-none"
+            aria-label="닫기"
+          >
+            ×
+          </button>
+        </div>
+        <div className="p-4 overflow-auto">
+          <table className="data celled text-sm">
+            <thead>
+              <tr>
+                <th className="whitespace-nowrap">납기일</th>
+                <th>구분</th>
+                <th>국가</th>
+                <th>품명</th>
+                <th className="text-right">수량(단위)</th>
+                <th className="text-right">매출 계</th>
+                <th className="text-right">원가 계</th>
+                <th className="text-right">환율</th>
+              </tr>
+            </thead>
+            <tbody>
+              {group.rows.map((r) => (
+                <tr key={r.id}>
+                  <td className="whitespace-nowrap">{ymd(r.delivery_date)}</td>
+                  <td className="text-slate-500">{r.supply_type}</td>
+                  <td>{r.country_name}</td>
+                  <td>{r.product_name}</td>
+                  <td className="text-right tabular-nums">{fmt(num(r.qty_unit), 0)}</td>
+                  <td className="text-right tabular-nums">{fmt(num(r.sales_total))}</td>
+                  <td className="text-right tabular-nums">{fmt(num(r.mfg_cost_total))}</td>
+                  <td className="text-right tabular-nums text-slate-500">
+                    {fmt(num(r.exchange_rate), 0)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="font-semibold bg-slate-50">
+                <td colSpan={5}>소계</td>
+                <td className="text-right tabular-nums">{fmt(group.sales)}</td>
+                <td className="text-right tabular-nums">{fmt(group.cost)}</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
   );
 }
