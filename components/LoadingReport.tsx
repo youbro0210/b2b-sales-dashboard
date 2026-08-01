@@ -4,14 +4,16 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import ReportShell from "@/components/ReportShell";
 import { fmt, ymd, todayKST } from "@/lib/types";
-import { listChannels, listLoadingRange } from "@/lib/actions";
+import { listLoadingRange, listChannels } from "@/lib/actions";
 
-type Channel = { id: number; group_name: string | null; name: string; sort_order: number };
 const num = (v: any) => Number(v ?? 0);
+const PAGE = 20; // 페이지당 채널 수
 const isSum = (n: string) => /합계\s*$/.test((n || "").trim());
-const PAGE = 20;
 
-// B2C 오프라인 / B2C 온라인 / 특정 현황 (조회 전용 + 채널 필터 + 페이징 + 엑셀 다운로드)
+type Group = { name: string; rows: any[]; supply: number };
+
+// B2C 오프라인 / 온라인 현황
+// 조회 시 채널(판매처)별 합계 + 누계를 먼저 보여주고, 채널명 클릭 시 일자별 세부 내역 팝업
 export default function LoadingReport({
   title,
   groups,
@@ -22,94 +24,94 @@ export default function LoadingReport({
   const today = todayKST();
   const [from, setFrom] = useState(today);
   const [to, setTo] = useState(today);
-  const [chan, setChan] = useState(""); // 선택 채널명 ("" = 전체)
+  const [chan, setChan] = useState(""); // 채널 필터 ("" = 전체)
   const [rows, setRows] = useState<any[]>([]);
-  const [channels, setChannels] = useState<Channel[]>([]);
+  const [order, setOrder] = useState<Record<string, number>>({});
+  const [chanList, setChanList] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(0);
   const [searched, setSearched] = useState(false);
+  const [detail, setDetail] = useState<Group | null>(null);
 
+  // 채널 순서(기준정보) 로드 → 정렬 및 필터 옵션에 사용
   useEffect(() => {
     listChannels().then((d) => {
-      const all = d as Channel[];
+      const all = d as any[];
       let cur = "";
-      const wg = all.map((c) => {
+      const map: Record<string, number> = {};
+      const names: string[] = [];
+      all.forEach((c, i) => {
         if (c.group_name) cur = c.group_name;
-        return { ...c, group_name: c.group_name || cur };
+        const g = c.group_name || cur;
+        if (groups.includes(g) && !isSum(c.name)) {
+          map[c.name] = i;
+          names.push(c.name);
+        }
       });
-      setChannels(wg);
+      setOrder(map);
+      setChanList(names);
     });
-  }, []);
+  }, [groups]);
 
-  // 이 화면이 다루는 채널 (합계 행 제외)
-  const menuChannels = useMemo(
-    () => channels.filter((c) => groups.includes(c.group_name || "") && !isSum(c.name)),
-    [channels, groups]
-  );
-  const allowIds = useMemo(() => new Set(menuChannels.map((c) => c.id)), [menuChannels]);
-  const nameOf = useMemo(() => {
-    const m = new Map<number, string>();
-    channels.forEach((c) => m.set(c.id, c.name));
-    return m;
-  }, [channels]);
-
-  const orderOf = useMemo(() => {
-    const m = new Map<number, number>();
-    channels.forEach((c, i) => m.set(c.id, Number(c.sort_order ?? i)));
-    return m;
-  }, [channels]);
+  const orderOf = (n: string) => (n in order ? order[n] : 9999);
 
   const fetchRows = useCallback(async () => {
     if (from > to) return;
     setLoading(true);
     let data = (await listLoadingRange(from, to)) as any[];
-    data = data.filter((r) => allowIds.has(r.channel_id));
-    if (chan) data = data.filter((r) => (nameOf.get(r.channel_id) || r.channel_name) === chan);
+    data = data.filter((r) => groups.includes(String(r.group_name ?? "")));
+    if (chan) data = data.filter((r) => String(r.channel_name) === chan);
     data.sort(
       (a, b) =>
-        ymd(a.load_date).localeCompare(ymd(b.load_date)) ||
-        (orderOf.get(a.channel_id) ?? 9999) - (orderOf.get(b.channel_id) ?? 9999)
+        orderOf(String(a.channel_name)) - orderOf(String(b.channel_name)) ||
+        ymd(a.load_date).localeCompare(ymd(b.load_date))
     );
     setRows(data);
     setPage(0);
     setSearched(true);
     setLoading(false);
-  }, [from, to, chan, allowIds, nameOf, orderOf]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [from, to, chan, order, groups]);
+
+  // 채널별 그룹 (연속 정렬되어 있으므로 순서대로 묶는다)
+  const gps = useMemo<Group[]>(() => {
+    const g: Group[] = [];
+    let cur: Group | null = null;
+    for (const r of rows) {
+      const nm = r.channel_name || "(미지정)";
+      if (!cur || nm !== cur.name) {
+        cur = { name: nm, rows: [], supply: 0 };
+        g.push(cur);
+      }
+      cur.rows.push(r);
+      cur.supply += num(r.supply_amount);
+    }
+    return g;
+  }, [rows]);
 
   const total = rows.reduce((s, r) => s + num(r.supply_amount), 0);
-  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE));
-  const pageRows = rows.slice(page * PAGE, (page + 1) * PAGE);
 
-  // 채널별 합계 (엑셀 두 번째 시트용)
-  const byChannel = useMemo(() => {
-    const m = new Map<number, number>();
-    rows.forEach((r) => m.set(r.channel_id, (m.get(r.channel_id) || 0) + num(r.supply_amount)));
-    return menuChannels
-      .map((c) => ({ name: c.name, sum: m.get(c.id) || 0 }))
-      .filter((x) => x.sum !== 0);
-  }, [rows, menuChannels]);
+  // 표시 순서대로 누계 계산
+  const gpsCum = useMemo(() => {
+    let run = 0;
+    return gps.map((g) => {
+      run += g.supply;
+      return { g, cum: run };
+    });
+  }, [gps]);
+
+  const pageCount = Math.max(1, Math.ceil(gps.length / PAGE));
+  const pageGps = gpsCum.slice(page * PAGE, (page + 1) * PAGE);
 
   const download = () => {
-    const detail = rows.map((r) => [
-      ymd(r.load_date),
-      nameOf.get(r.channel_id) || r.channel_name,
-      num(r.supply_amount),
-    ]);
+    const aoa: any[] = [["채널명", "일자", "공급가액"]];
+    gps.forEach((g) => {
+      g.rows.forEach((r) => aoa.push([g.name, ymd(r.load_date), num(r.supply_amount)]));
+      aoa.push([`${g.name} 소계`, "", g.supply]);
+    });
+    aoa.push(["합계", "", total]);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(
-      wb,
-      XLSX.utils.aoa_to_sheet([["일자", "채널명", "공급가액"], ...detail, ["합계", "", total]]),
-      "상세"
-    );
-    XLSX.utils.book_append_sheet(
-      wb,
-      XLSX.utils.aoa_to_sheet([
-        ["채널명", "기간 합계"],
-        ...byChannel.map((x) => [x.name, x.sum]),
-        ["합계", total],
-      ]),
-      "채널별합계"
-    );
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), "현황");
     XLSX.writeFile(wb, `${title}현황_${from}_${to}.xlsx`);
   };
 
@@ -120,8 +122,8 @@ export default function LoadingReport({
       onChange={(e) => setChan(e.target.value)}
     >
       <option value="">전체 채널</option>
-      {menuChannels.map((c) => (
-        <option key={c.id} value={c.name}>{c.name}</option>
+      {chanList.map((c) => (
+        <option key={c} value={c}>{c}</option>
       ))}
     </select>
   );
@@ -136,12 +138,15 @@ export default function LoadingReport({
       onSearch={fetchRows}
       onDownload={download}
       loading={loading}
-      count={rows.length}
+      count={gps.length}
       extraFilter={filter}
     >
       <div className="card overflow-x-auto">
         <div className="mb-3">
-          <h2 className="font-semibold">{title} 내역</h2>
+          <h2 className="font-semibold">{title} · 채널별 매출</h2>
+          <p className="text-xs text-slate-500">
+            채널명을 클릭하면 일자별 세부 내역이 팝업으로 열립니다.
+          </p>
         </div>
         {loading ? (
           <p className="text-slate-500">불러오는 중...</p>
@@ -152,37 +157,47 @@ export default function LoadingReport({
             <table className="data celled">
               <thead>
                 <tr>
-                  <th>일자</th>
-                  <th style={{ minWidth: 200 }}>채널명</th>
+                  <th style={{ minWidth: 160 }}>채널명</th>
                   <th className="text-right">공급가액</th>
+                  <th className="text-right">누계공급가액</th>
                 </tr>
               </thead>
               <tbody>
-                {rows.length === 0 && (
+                {gps.length === 0 && (
                   <tr>
                     <td colSpan={3} className="text-center text-slate-400 py-6">
                       조회된 데이터가 없습니다.
                     </td>
                   </tr>
                 )}
-                {pageRows.map((r, i) => (
-                  <tr key={r.channel_id + "-" + ymd(r.load_date) + "-" + i}>
-                    <td className="whitespace-nowrap">{ymd(r.load_date)}</td>
-                    <td>{nameOf.get(r.channel_id) || r.channel_name}</td>
-                    <td className="text-right tabular-nums">{fmt(num(r.supply_amount))}</td>
+                {pageGps.map(({ g, cum }) => (
+                  <tr key={g.name} className="hover:bg-sky-50">
+                    <td className="whitespace-nowrap">
+                      <button
+                        type="button"
+                        onClick={() => setDetail(g)}
+                        className="font-medium text-sky-700 hover:underline text-left"
+                        title="일자별 세부 내역 보기"
+                      >
+                        {g.name} 🔍
+                      </button>
+                    </td>
+                    <td className="text-right tabular-nums">{fmt(g.supply)}</td>
+                    <td className="text-right tabular-nums text-slate-500">{fmt(cum)}</td>
                   </tr>
                 ))}
               </tbody>
-              {rows.length > 0 && (
+              {gps.length > 0 && (
                 <tfoot>
                   <tr className="font-semibold bg-slate-50">
-                    <td colSpan={2}>합계</td>
+                    <td>합계</td>
                     <td className="text-right">{fmt(total)}</td>
+                    <td></td>
                   </tr>
                 </tfoot>
               )}
             </table>
-            {rows.length > PAGE && (
+            {gps.length > PAGE && (
               <div className="flex items-center justify-center gap-2 mt-3 text-sm">
                 <button
                   className="btn-ghost !py-1 !px-3"
@@ -204,6 +219,62 @@ export default function LoadingReport({
           </>
         )}
       </div>
+
+      {detail && <DetailModal group={detail} onClose={() => setDetail(null)} />}
     </ReportShell>
+  );
+}
+
+// 채널 일자별 세부 내역 팝업
+function DetailModal({ group, onClose }: { group: Group; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div className="absolute inset-0 bg-black/40" />
+      <div
+        className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b">
+          <div>
+            <h3 className="font-bold text-lg">{group.name}</h3>
+            <p className="text-xs text-slate-500">세부 내역 · {group.rows.length}건</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-700 text-2xl leading-none"
+            aria-label="닫기"
+          >
+            ×
+          </button>
+        </div>
+        <div className="p-4 overflow-auto">
+          <table className="data celled text-sm">
+            <thead>
+              <tr>
+                <th className="whitespace-nowrap">일자</th>
+                <th className="text-right">공급가액</th>
+              </tr>
+            </thead>
+            <tbody>
+              {group.rows.map((r) => (
+                <tr key={r.id}>
+                  <td className="whitespace-nowrap">{ymd(r.load_date)}</td>
+                  <td className="text-right tabular-nums">{fmt(num(r.supply_amount))}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="font-semibold bg-slate-50">
+                <td>소계</td>
+                <td className="text-right tabular-nums">{fmt(group.supply)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
   );
 }
