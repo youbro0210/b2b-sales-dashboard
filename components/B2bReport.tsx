@@ -226,7 +226,7 @@ export default function B2bReport() {
                     <td className="text-right">{fmt(t.sales)}</td>
                     <td className="text-right">{fmt(t.profit)}</td>
                     <td className="text-right">{rate}%</td>
-                    <td></td>
+                    <td className="text-right tabular-nums">{fmt(t.sales)}</td>
                   </tr>
                 </tfoot>
               )}
