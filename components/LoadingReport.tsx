@@ -209,7 +209,7 @@ export default function LoadingReport({
                   <tr className="font-semibold bg-slate-50">
                     <td>합계</td>
                     <td className="text-right">{fmt(total)}</td>
-                    <td></td>
+                    <td className="text-right tabular-nums">{fmt(total)}</td>
                   </tr>
                 </tfoot>
               )}
