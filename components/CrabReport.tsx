@@ -205,7 +205,7 @@ export default function CrabReport() {
                     <td className="text-right">{fmt(t.sales, 0)}</td>
                     <td className="text-right">{fmt(t.profit, 0)}</td>
                     <td className="text-right">{pct(t.profit, t.sales)}%</td>
-                    <td></td>
+                    <td className="text-right tabular-nums">{fmt(t.sales, 0)}</td>
                   </tr>
                 </tfoot>
               )}
