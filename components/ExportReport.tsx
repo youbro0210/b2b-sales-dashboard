@@ -192,7 +192,7 @@ export default function ExportReport() {
                     <td>합계</td>
                     <td className="text-right">{fmt(t.sales)}</td>
                     <td className="text-right">{fmt(t.cost)}</td>
-                    <td></td>
+                    <td className="text-right tabular-nums">{fmt(t.sales)}</td>
                   </tr>
                 </tfoot>
               )}
