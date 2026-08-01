@@ -33,33 +33,50 @@ export default function LoadingReport({
   const [searched, setSearched] = useState(false);
   const [detail, setDetail] = useState<Group | null>(null);
 
-  // 채널 순서(기준정보) 로드 → 정렬 및 필터 옵션에 사용
+  // 기준정보(채널)에서 이 그룹에 속한 채널 목록·순서를 만든다
+  // (listLoadingRange 는 group_name 을 내려주지 않으므로, 채널명 기준으로 그룹 소속을 판단한다)
+  const loadChannelMeta = useCallback(async () => {
+    const all = (await listChannels()) as any[];
+    let cur = "";
+    const map: Record<string, number> = {};
+    const names: string[] = [];
+    all.forEach((c, i) => {
+      if (c.group_name) cur = c.group_name;
+      const g = c.group_name || cur;
+      if (groups.includes(g) && !isSum(c.name)) {
+        map[c.name] = i;
+        names.push(c.name);
+      }
+    });
+    return { map, names };
+  }, [groups]);
+
   useEffect(() => {
-    listChannels().then((d) => {
-      const all = d as any[];
-      let cur = "";
-      const map: Record<string, number> = {};
-      const names: string[] = [];
-      all.forEach((c, i) => {
-        if (c.group_name) cur = c.group_name;
-        const g = c.group_name || cur;
-        if (groups.includes(g) && !isSum(c.name)) {
-          map[c.name] = i;
-          names.push(c.name);
-        }
-      });
+    loadChannelMeta().then(({ map, names }) => {
       setOrder(map);
       setChanList(names);
     });
-  }, [groups]);
-
-  const orderOf = (n: string) => (n in order ? order[n] : 9999);
+  }, [loadChannelMeta]);
 
   const fetchRows = useCallback(async () => {
     if (from > to) return;
     setLoading(true);
+    // 채널 소속표가 아직 준비되지 않았으면 즉시 로드 (초기 조회 시 빈 화면 방지)
+    let meta = order;
+    if (Object.keys(meta).length === 0) {
+      const m = await loadChannelMeta();
+      meta = m.map;
+      setOrder(m.map);
+      setChanList(m.names);
+    }
+    const orderOf = (n: string) =>
+      Object.prototype.hasOwnProperty.call(meta, n) ? meta[n] : 9999;
+
     let data = (await listLoadingRange(from, to)) as any[];
-    data = data.filter((r) => groups.includes(String(r.group_name ?? "")));
+    // 이 그룹(오프라인/온라인)에 속한 채널만 남긴다 (채널명 기준)
+    data = data.filter((r) =>
+      Object.prototype.hasOwnProperty.call(meta, String(r.channel_name))
+    );
     if (chan) data = data.filter((r) => String(r.channel_name) === chan);
     data.sort(
       (a, b) =>
@@ -71,7 +88,7 @@ export default function LoadingReport({
     setSearched(true);
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [from, to, chan, order, groups]);
+  }, [from, to, chan, order, loadChannelMeta]);
 
   // 채널별 그룹 (연속 정렬되어 있으므로 순서대로 묶는다)
   const gps = useMemo<Group[]>(() => {
