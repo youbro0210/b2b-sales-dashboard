@@ -1,13 +1,13 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import ReportShell from "@/components/ReportShell";
 import { fmt, ymd, todayKST } from "@/lib/types";
 import { listB2bRange, listCustomers } from "@/lib/actions";
 
 const num = (v: any) => Number(v ?? 0);
-const GPAGE = 10; // 페이지당 거래처 수
+const GPAGE = 15; // 페이지당 거래처 수
 
 type Group = {
   name: string;
@@ -81,8 +81,18 @@ export default function B2bReport() {
     { mfg: 0, sales: 0, profit: 0 }
   );
   const rate = t.sales ? ((t.profit / t.sales) * 100).toFixed(1) : "0.0";
+
+  // 표시 순서대로 누계(러닝 합계) 매출액 계산
+  const groupsCum = useMemo(() => {
+    let run = 0;
+    return groups.map((g) => {
+      run += g.sales;
+      return { g, cumSales: run };
+    });
+  }, [groups]);
+
   const pageCount = Math.max(1, Math.ceil(groups.length / GPAGE));
-  const pageGroups = groups.slice(page * GPAGE, (page + 1) * GPAGE);
+  const pageGroups = groupsCum.slice(page * GPAGE, (page + 1) * GPAGE);
 
   const download = () => {
     const aoa: any[] = [
@@ -146,12 +156,15 @@ export default function B2bReport() {
       onSearch={fetchRows}
       onDownload={download}
       loading={loading}
-      count={rows.length}
+      count={groups.length}
       extraFilter={filter}
     >
       <div className="card overflow-x-auto">
         <div className="mb-3">
-          <h2 className="font-semibold">매출 내역</h2>
+          <h2 className="font-semibold">거래처별 매출</h2>
+          <p className="text-xs text-slate-500">
+            거래처명을 클릭하면 일자별 세부 내역이 팝업으로 열립니다.
+          </p>
         </div>
         {loading ? (
           <p className="text-slate-500">불러오는 중...</p>
@@ -163,72 +176,52 @@ export default function B2bReport() {
               <thead>
                 <tr>
                   <th style={{ minWidth: 160 }}>고객사명</th>
-                  <th>일자</th>
                   <th className="text-right">제조원가</th>
                   <th className="text-right">매출액</th>
                   <th className="text-right">매출이익액</th>
                   <th className="text-right">이익율</th>
-                  <th>비고</th>
+                  <th className="text-right">누계매출액</th>
                 </tr>
               </thead>
               <tbody>
                 {groups.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="text-center text-slate-400 py-6">
+                    <td colSpan={6} className="text-center text-slate-400 py-6">
                       조회된 데이터가 없습니다.
                     </td>
                   </tr>
                 )}
-                {pageGroups.map((g) => (
-                  <Fragment key={g.name}>
-                    {g.rows.map((r, i) => {
-                      const sales = num(r.sales_amount);
-                      const rr = sales
-                        ? ((num(r.profit_amount) / sales) * 100).toFixed(1)
-                        : "0.0";
-                      return (
-                        <tr key={r.id}>
-                          {i === 0 && (
-                            <td
-                              rowSpan={g.rows.length + 1}
-                              className="align-top bg-slate-50 whitespace-nowrap"
-                            >
-                              <button
-                                type="button"
-                                onClick={() => setDetail(g)}
-                                className="font-medium text-sky-700 hover:underline text-left"
-                                title="세부 내역 보기"
-                              >
-                                {g.name} 🔍
-                              </button>
-                            </td>
-                          )}
-                          <td className="whitespace-nowrap">{ymd(r.sale_date)}</td>
-                          <td className="text-right tabular-nums">{fmt(num(r.mfg_cost))}</td>
-                          <td className="text-right tabular-nums">{fmt(sales)}</td>
-                          <td className="text-right tabular-nums">{fmt(num(r.profit_amount))}</td>
-                          <td className="text-right text-slate-500">{rr}%</td>
-                          <td className="text-slate-500">{r.note}</td>
-                        </tr>
-                      );
-                    })}
-                    <tr className="bg-slate-100 font-medium text-sm">
-                      <td className="text-right text-slate-600">소계</td>
+                {pageGroups.map(({ g, cumSales }) => {
+                  const rr = g.sales
+                    ? ((g.profit / g.sales) * 100).toFixed(1)
+                    : "0.0";
+                  return (
+                    <tr key={g.name} className="hover:bg-sky-50">
+                      <td className="whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => setDetail(g)}
+                          className="font-medium text-sky-700 hover:underline text-left"
+                          title="일자별 세부 내역 보기"
+                        >
+                          {g.name} 🔍
+                        </button>
+                      </td>
                       <td className="text-right tabular-nums">{fmt(g.mfg)}</td>
                       <td className="text-right tabular-nums">{fmt(g.sales)}</td>
                       <td className="text-right tabular-nums">{fmt(g.profit)}</td>
-                      <td className="text-right text-slate-500">
-                        {g.sales ? ((g.profit / g.sales) * 100).toFixed(1) : "0.0"}%
+                      <td className="text-right text-slate-500">{rr}%</td>
+                      <td className="text-right tabular-nums text-slate-500">
+                        {fmt(cumSales)}
                       </td>
-                      <td></td>
                     </tr>
-                  </Fragment>
-                ))}
+                  );
+                })}
               </tbody>
               {groups.length > 0 && (
                 <tfoot>
                   <tr className="font-semibold bg-slate-50">
-                    <td colSpan={2}>합계</td>
+                    <td>합계</td>
                     <td className="text-right">{fmt(t.mfg)}</td>
                     <td className="text-right">{fmt(t.sales)}</td>
                     <td className="text-right">{fmt(t.profit)}</td>
