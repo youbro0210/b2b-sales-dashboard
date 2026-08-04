@@ -218,7 +218,7 @@ export default function LoadingReport({
             {costcoGps.length > 0 && (
               <div className="mb-6">
                 <h3 className="font-semibold text-sm mb-2">
-                  코스트코 (별도 집계 · 아래 마트 합계에 미포함)
+                  코스트코 (별도 표시)
                 </h3>
                 <table className="data celled">
                   <thead>
@@ -304,12 +304,12 @@ export default function LoadingReport({
                   )
                 )}
               </tbody>
-              {mainGps.length > 0 && (
+              {gps.length > 0 && (
                 <tfoot>
                   <tr className="font-semibold bg-slate-50">
-                    <td>매출 합계 (코스트코 제외)</td>
-                    <td className="text-right">{fmt(total)}</td>
-                    <td className="text-right tabular-nums">{fmt(total)}</td>
+                    <td>매출 합계 (코스트코 포함)</td>
+                    <td className="text-right tabular-nums">{fmt(total + costcoTotal)}</td>
+                    <td></td>
                   </tr>
                 </tfoot>
               )}
