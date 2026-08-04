@@ -727,3 +727,37 @@ export async function dashboardData() {
 
   return { b2b, exp, load, crab };
 }
+
+
+// ===== 매출 특이사항 (sales_notes) =====
+async function ensureSalesNotes() {
+  await sql`CREATE TABLE IF NOT EXISTS sales_notes (
+    id serial PRIMARY KEY,
+    note_type text NOT NULL,
+    content text NOT NULL,
+    sort_order int NOT NULL DEFAULT 0
+  )`;
+}
+
+export async function listSalesNotes() {
+  await ensureSalesNotes();
+  return await sql`SELECT id, note_type, content, sort_order FROM sales_notes ORDER BY note_type, sort_order, id`;
+}
+
+export async function addSalesNote(note_type: string, content: string) {
+  await ensureSalesNotes();
+  const r = (await sql`SELECT COALESCE(MAX(sort_order), 0) + 1 AS n FROM sales_notes WHERE note_type = ${note_type}`) as any[];
+  const order = Number(r[0]?.n ?? 1);
+  await sql`INSERT INTO sales_notes (note_type, content, sort_order) VALUES (${note_type}, ${content}, ${order})`;
+  return { ok: true };
+}
+
+export async function updateSalesNote(id: number, content: string) {
+  await sql`UPDATE sales_notes SET content = ${content} WHERE id = ${id}`;
+  return { ok: true };
+}
+
+export async function deleteSalesNote(id: number) {
+  await sql`DELETE FROM sales_notes WHERE id = ${id}`;
+  return { ok: true };
+}
