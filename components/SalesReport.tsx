@@ -273,7 +273,7 @@ function NotesEditor() {
   return (
     <div className="space-y-4">
       {NOTE_TYPES.map((t) => (
-        <Section key={t.key} type={t.key} label={t.label} />
+        <div key={t.key}>{Section({ type: t.key, label: t.label })}</div>
       ))}
     </div>
   );
@@ -337,21 +337,28 @@ export default function SalesReport() {
   );
 }
 
-// ===== 대시보드 블록: 오늘 기준 표 + 특이사항(읽기 전용) =====
+// ===== 대시보드 블록: 상차일자 선택 표 + 특이사항(읽기 전용) =====
 export function SalesDashboardBlock() {
-  const [today, setToday] = useState(() => todayKST());
+  const [date, setDate] = useState(() => todayKST());
   const { notes } = useNotes();
-  useEffect(() => {
-    setToday(todayKST());
-  }, []);
   return (
     <div className="card">
-      <div className="flex items-start justify-between gap-2 flex-wrap mb-3">
+      <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
         <h2 className="font-semibold">B2C 매출 현황</h2>
-        <span className="text-[11px] text-slate-400">상차일자 {today} · 단위: 천원</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] text-slate-400">상차일자</span>
+          <input
+            type="date"
+            className="input !py-1 !text-xs max-w-[150px]"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
+          <span className="text-[11px] text-slate-400">· 천원</span>
+        </div>
       </div>
-      <SalesTable date={today} />
+      <SalesTable date={date} />
       <div className="mt-4 border-t border-slate-100 pt-3">
+        <p className="text-[11px] text-slate-400 mb-2">특이사항 등록·수정은 [입력 › 매출 리포트] 화면에서 하세요.</p>
         <NotesView notes={notes} />
       </div>
     </div>
