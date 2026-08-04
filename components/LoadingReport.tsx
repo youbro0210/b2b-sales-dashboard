@@ -130,28 +130,29 @@ export default function LoadingReport({
   const total = mainGps.reduce((s, g) => s + g.supply, 0);
   const costcoTotal = costcoGps.reduce((s, g) => s + g.supply, 0);
 
-  // 브랜드별로 묶어 [채널행들 + (2개 이상이면) 브랜드 소계행]을 만들고 누계를 누적한다
+  // 브랜드별로 묶고, 매출(공급가액) 내림차순으로 정렬한 뒤 누계를 누적한다
+  // (브랜드는 소계 합계가 큰 순, 브랜드 안 채널은 매출 큰 순)
   const display = useMemo(() => {
-    const orderKeys: string[] = [];
     const bmap: Record<string, Group[]> = {};
     mainGps.forEach((g) => {
       const bk = brandOf(g.name);
-      if (!bmap[bk]) {
-        bmap[bk] = [];
-        orderKeys.push(bk);
-      }
+      if (!bmap[bk]) bmap[bk] = [];
       bmap[bk].push(g);
     });
+    const brands = Object.keys(bmap).map((bk) => {
+      const chans = [...bmap[bk]].sort((a, b) => b.supply - a.supply);
+      const sum = chans.reduce((s, g) => s + g.supply, 0);
+      return { bk, chans, sum };
+    });
+    brands.sort((a, b) => b.sum - a.sum);
     let run = 0;
     const out: any[] = [];
-    orderKeys.forEach((bk) => {
-      const chans = bmap[bk];
+    brands.forEach(({ bk, chans, sum }) => {
       chans.forEach((g) => {
         run += g.supply;
         out.push({ type: "ch", g, cum: run });
       });
       if (chans.length >= 2) {
-        const sum = chans.reduce((s, g) => s + g.supply, 0);
         out.push({ type: "sub", brand: bk, supply: sum });
       }
     });
@@ -286,7 +287,9 @@ export default function LoadingReport({
                     </tr>
                   </thead>
                   <tbody>
-                    {costcoGps.map((g) => (
+                    {[...costcoGps]
+                      .sort((a, b) => b.supply - a.supply)
+                      .map((g) => (
                       <tr key={g.name} className="hover:bg-sky-50">
                         <td className="whitespace-nowrap">
                           <button
