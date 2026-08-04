@@ -7,10 +7,26 @@ import { fmt, ymd, todayKST } from "@/lib/types";
 import { listLoadingRange, listChannels } from "@/lib/actions";
 
 const num = (v: any) => Number(v ?? 0);
-const PAGE = 20; // 페이지당 채널 수
 const isSum = (n: string) => /합계\s*$/.test((n || "").trim());
 
 type Group = { name: string; rows: any[]; supply: number };
+
+// 마트 브랜드(채널명 접두어) — 같은 브랜드 채널끼리 소계로 묶는다
+// 예) 롯데마트 소계 = 롯데마트 + 롯데마트정발행 + 롯데마트물갈이역발행
+const BRANDS = [
+  "코스트코",
+  "롯데마트",
+  "롯데슈퍼",
+  "이마트",
+  "트레이더스",
+  "에브리데이",
+  "서원유통",
+  "홈플러스",
+];
+const brandOf = (name: string) => {
+  const cands = BRANDS.filter((b) => name.startsWith(b));
+  return cands.length ? cands.reduce((a, b) => (b.length > a.length ? b : a)) : name;
+};
 
 // B2C 오프라인 / 온라인 현황
 // 조회 시 채널(판매처)별 합계 + 누계를 먼저 보여주고, 채널명 클릭 시 일자별 세부 내역 팝업
@@ -29,7 +45,6 @@ export default function LoadingReport({
   const [order, setOrder] = useState<Record<string, number>>({});
   const [chanList, setChanList] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(0);
   const [searched, setSearched] = useState(false);
   const [detail, setDetail] = useState<Group | null>(null);
 
@@ -84,7 +99,6 @@ export default function LoadingReport({
         ymd(a.load_date).localeCompare(ymd(b.load_date))
     );
     setRows(data);
-    setPage(0);
     setSearched(true);
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -108,17 +122,33 @@ export default function LoadingReport({
 
   const total = rows.reduce((s, r) => s + num(r.supply_amount), 0);
 
-  // 표시 순서대로 누계 계산
-  const gpsCum = useMemo(() => {
-    let run = 0;
-    return gps.map((g) => {
-      run += g.supply;
-      return { g, cum: run };
+  // 브랜드별로 묶어 [채널행들 + (2개 이상이면) 브랜드 소계행]을 만들고 누계를 누적한다
+  const display = useMemo(() => {
+    const orderKeys: string[] = [];
+    const bmap: Record<string, Group[]> = {};
+    gps.forEach((g) => {
+      const bk = brandOf(g.name);
+      if (!bmap[bk]) {
+        bmap[bk] = [];
+        orderKeys.push(bk);
+      }
+      bmap[bk].push(g);
     });
+    let run = 0;
+    const out: any[] = [];
+    orderKeys.forEach((bk) => {
+      const chans = bmap[bk];
+      chans.forEach((g) => {
+        run += g.supply;
+        out.push({ type: "ch", g, cum: run });
+      });
+      if (chans.length >= 2) {
+        const sum = chans.reduce((s, g) => s + g.supply, 0);
+        out.push({ type: "sub", brand: bk, supply: sum });
+      }
+    });
+    return out;
   }, [gps]);
-
-  const pageCount = Math.max(1, Math.ceil(gps.length / PAGE));
-  const pageGps = gpsCum.slice(page * PAGE, (page + 1) * PAGE);
 
   const download = () => {
     const aoa: any[] = [["채널명", "일자", "공급가액"]];
@@ -187,22 +217,30 @@ export default function LoadingReport({
                     </td>
                   </tr>
                 )}
-                {pageGps.map(({ g, cum }) => (
-                  <tr key={g.name} className="hover:bg-sky-50">
-                    <td className="whitespace-nowrap">
-                      <button
-                        type="button"
-                        onClick={() => setDetail(g)}
-                        className="font-medium text-sky-700 hover:underline text-left"
-                        title="일자별 세부 내역 보기"
-                      >
-                        {g.name} 🔍
-                      </button>
-                    </td>
-                    <td className="text-right tabular-nums">{fmt(g.supply)}</td>
-                    <td className="text-right tabular-nums text-slate-500">{fmt(cum)}</td>
-                  </tr>
-                ))}
+                {display.map((row, i) =>
+                  row.type === "ch" ? (
+                    <tr key={row.g.name} className="hover:bg-sky-50">
+                      <td className="whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => setDetail(row.g)}
+                          className="font-medium text-sky-700 hover:underline text-left"
+                          title="일자별 세부 내역 보기"
+                        >
+                          {row.g.name} 🔍
+                        </button>
+                      </td>
+                      <td className="text-right tabular-nums">{fmt(row.g.supply)}</td>
+                      <td className="text-right tabular-nums text-slate-500">{fmt(row.cum)}</td>
+                    </tr>
+                  ) : (
+                    <tr key={"sub-" + row.brand + i} className="bg-slate-100 font-medium text-sm">
+                      <td className="text-right text-slate-600">{row.brand} 소계</td>
+                      <td className="text-right tabular-nums">{fmt(row.supply)}</td>
+                      <td></td>
+                    </tr>
+                  )
+                )}
               </tbody>
               {gps.length > 0 && (
                 <tfoot>
@@ -214,25 +252,6 @@ export default function LoadingReport({
                 </tfoot>
               )}
             </table>
-            {gps.length > PAGE && (
-              <div className="flex items-center justify-center gap-2 mt-3 text-sm">
-                <button
-                  className="btn-ghost !py-1 !px-3"
-                  disabled={page === 0}
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                >
-                  이전
-                </button>
-                <span className="text-slate-500">{page + 1} / {pageCount}</span>
-                <button
-                  className="btn-ghost !py-1 !px-3"
-                  disabled={page >= pageCount - 1}
-                  onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
-                >
-                  다음
-                </button>
-              </div>
-            )}
           </>
         )}
       </div>
