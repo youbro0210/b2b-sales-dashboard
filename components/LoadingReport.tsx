@@ -29,6 +29,9 @@ const brandOf = (name: string) => {
   return cands.length ? cands.reduce((a, b) => (b.length > a.length ? b : a)) : name;
 };
 
+// 코스트코는 마트 합계와 별도로 집계 (합계·누계에서 제외)
+const isCostco = (name: string) => name.startsWith("코스트코");
+
 // B2C 오프라인 / 온라인 현황
 // 조회 시 채널(판매처)별 합계 + 누계를 먼저 보여주고, 채널명 클릭 시 일자별 세부 내역 팝업
 export default function LoadingReport({
@@ -121,13 +124,17 @@ export default function LoadingReport({
     return g;
   }, [rows]);
 
-  const total = rows.reduce((s, r) => s + num(r.supply_amount), 0);
+  // 코스트코는 별도 집계 → 일반 마트(main)와 분리
+  const mainGps = useMemo(() => gps.filter((g) => !isCostco(g.name)), [gps]);
+  const costcoGps = useMemo(() => gps.filter((g) => isCostco(g.name)), [gps]);
+  const total = mainGps.reduce((s, g) => s + g.supply, 0);
+  const costcoTotal = costcoGps.reduce((s, g) => s + g.supply, 0);
 
   // 브랜드별로 묶어 [채널행들 + (2개 이상이면) 브랜드 소계행]을 만들고 누계를 누적한다
   const display = useMemo(() => {
     const orderKeys: string[] = [];
     const bmap: Record<string, Group[]> = {};
-    gps.forEach((g) => {
+    mainGps.forEach((g) => {
       const bk = brandOf(g.name);
       if (!bmap[bk]) {
         bmap[bk] = [];
@@ -149,15 +156,20 @@ export default function LoadingReport({
       }
     });
     return out;
-  }, [gps]);
+  }, [mainGps]);
 
   const download = () => {
     const aoa: any[] = [["채널명", "일자", "공급가액"]];
-    gps.forEach((g) => {
+    mainGps.forEach((g) => {
       g.rows.forEach((r) => aoa.push([g.name, ymd(r.load_date), num(r.supply_amount)]));
       aoa.push([`${g.name} 소계`, "", g.supply]);
     });
-    aoa.push(["합계", "", total]);
+    aoa.push(["합계 (코스트코 제외)", "", total]);
+    costcoGps.forEach((g) => {
+      g.rows.forEach((r) => aoa.push([g.name, ymd(r.load_date), num(r.supply_amount)]));
+      aoa.push([`${g.name} 소계`, "", g.supply]);
+    });
+    if (costcoGps.length) aoa.push(["코스트코 합계(별도)", "", costcoTotal]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), "현황");
     XLSX.writeFile(wb, `${title}현황_${from}_${to}.xlsx`);
@@ -218,6 +230,13 @@ export default function LoadingReport({
                     </td>
                   </tr>
                 )}
+                {mainGps.length === 0 && costcoGps.length > 0 && (
+                  <tr>
+                    <td colSpan={3} className="text-center text-slate-400 py-4">
+                      (일반 마트 데이터 없음 · 코스트코는 아래 별도 표시)
+                    </td>
+                  </tr>
+                )}
                 {display.map((row, i) =>
                   row.type === "ch" ? (
                     <tr key={row.g.name} className="hover:bg-sky-50">
@@ -243,16 +262,55 @@ export default function LoadingReport({
                   )
                 )}
               </tbody>
-              {gps.length > 0 && (
+              {mainGps.length > 0 && (
                 <tfoot>
                   <tr className="font-semibold bg-slate-50">
-                    <td>합계</td>
+                    <td>합계 (코스트코 제외)</td>
                     <td className="text-right">{fmt(total)}</td>
                     <td className="text-right tabular-nums">{fmt(total)}</td>
                   </tr>
                 </tfoot>
               )}
             </table>
+
+            {costcoGps.length > 0 && (
+              <div className="mt-6">
+                <h3 className="font-semibold text-sm mb-2">
+                  코스트코 (별도 집계 · 위 합계에 미포함)
+                </h3>
+                <table className="data celled">
+                  <thead>
+                    <tr>
+                      <th style={{ minWidth: 160 }}>채널명</th>
+                      <th className="text-right">공급가액</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {costcoGps.map((g) => (
+                      <tr key={g.name} className="hover:bg-sky-50">
+                        <td className="whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={() => setDetail(g)}
+                            className="font-medium text-sky-700 hover:underline text-left"
+                            title="일자별 세부 내역 보기"
+                          >
+                            {g.name} 🔍
+                          </button>
+                        </td>
+                        <td className="text-right tabular-nums">{fmt(g.supply)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="font-semibold bg-slate-50">
+                      <td>코스트코 합계</td>
+                      <td className="text-right tabular-nums">{fmt(costcoTotal)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
           </>
         )}
       </div>
