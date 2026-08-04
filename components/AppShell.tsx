@@ -20,6 +20,7 @@ import ExportReport from "@/components/ExportReport";
 import SpecialMatrix from "@/components/SpecialMatrix";
 import CrabBoard from "@/components/CrabBoard";
 import CrabReport from "@/components/CrabReport";
+import SalesReport from "@/components/SalesReport";
 
 const MART = ["오프라인", "롯데마트_수수료업체", "이마트_수수료업체"];
 const ONLINE = ["온라인"];
@@ -40,6 +41,7 @@ const SCREENS: Screen[] = [
   { key: "online", label: "B2C 온라인", icon: "🛒", group: "input", render: () => <LoadingBoard title="B2C 온라인" groups={ONLINE} /> },
   { key: "special", label: "특정", icon: "📦", group: "input", render: () => <SpecialDaily /> },
   { key: "crab", label: "꽃게", icon: "🦀", group: "input", render: () => <CrabBoard /> },
+  { key: "salesreport", label: "매출 리포트", icon: "🧾", group: "input", render: () => <SalesReport /> },
   { key: "export", label: "수출대장", icon: "🌏", group: "input", render: () => <ExportScreen /> },
 
   { key: "r-b2b", label: "B2B 현황", icon: "📈", group: "report", render: () => <B2bReport /> },
@@ -65,6 +67,7 @@ const PATH_TO_KEY: Record<string, string> = {
   "/online": "online",
   "/special": "special",
   "/crab": "crab",
+  "/sales-report": "salesreport",
   "/export": "export",
   "/report/b2b": "r-b2b",
   "/report/mart": "r-mart",
