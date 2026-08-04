@@ -215,69 +215,10 @@ export default function LoadingReport({
           <p className="text-center text-slate-400 py-6">🔍 조회 버튼을 눌러 조회하세요.</p>
         ) : (
           <>
-            <table className="data celled">
-              <thead>
-                <tr>
-                  <th style={{ minWidth: 160 }}>채널명</th>
-                  <th className="text-right">공급가액</th>
-                  <th className="text-right">누계공급가액</th>
-                </tr>
-              </thead>
-              <tbody>
-                {gps.length === 0 && (
-                  <tr>
-                    <td colSpan={3} className="text-center text-slate-400 py-6">
-                      조회된 데이터가 없습니다.
-                    </td>
-                  </tr>
-                )}
-                {mainGps.length === 0 && costcoGps.length > 0 && (
-                  <tr>
-                    <td colSpan={3} className="text-center text-slate-400 py-4">
-                      (일반 마트 데이터 없음 · 코스트코는 아래 별도 표시)
-                    </td>
-                  </tr>
-                )}
-                {display.map((row, i) =>
-                  row.type === "ch" ? (
-                    <tr key={row.g.name} className="hover:bg-sky-50">
-                      <td className="whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={() => setDetail(row.g)}
-                          className="font-medium text-sky-700 hover:underline text-left"
-                          title="일자별 세부 내역 보기"
-                        >
-                          {row.g.name} 🔍
-                        </button>
-                      </td>
-                      <td className="text-right tabular-nums">{fmt(row.g.supply)}</td>
-                      <td className="text-right tabular-nums text-slate-500">{fmt(row.cum)}</td>
-                    </tr>
-                  ) : (
-                    <tr key={"sub-" + row.brand + i} className="bg-slate-100 font-medium text-sm">
-                      <td className="text-right text-slate-600">{row.brand} 소계</td>
-                      <td className="text-right tabular-nums">{fmt(row.supply)}</td>
-                      <td></td>
-                    </tr>
-                  )
-                )}
-              </tbody>
-              {mainGps.length > 0 && (
-                <tfoot>
-                  <tr className="font-semibold bg-slate-50">
-                    <td>합계 (코스트코 제외)</td>
-                    <td className="text-right">{fmt(total)}</td>
-                    <td className="text-right tabular-nums">{fmt(total)}</td>
-                  </tr>
-                </tfoot>
-              )}
-            </table>
-
             {costcoGps.length > 0 && (
-              <div className="mt-6">
+              <div className="mb-6">
                 <h3 className="font-semibold text-sm mb-2">
-                  코스트코 (별도 집계 · 위 합계에 미포함)
+                  코스트코 (별도 집계 · 아래 마트 합계에 미포함)
                 </h3>
                 <table className="data celled">
                   <thead>
@@ -314,6 +255,65 @@ export default function LoadingReport({
                 </table>
               </div>
             )}
+
+            <table className="data celled">
+              <thead>
+                <tr>
+                  <th style={{ minWidth: 160 }}>채널명</th>
+                  <th className="text-right">공급가액</th>
+                  <th className="text-right">누계공급가액</th>
+                </tr>
+              </thead>
+              <tbody>
+                {gps.length === 0 && (
+                  <tr>
+                    <td colSpan={3} className="text-center text-slate-400 py-6">
+                      조회된 데이터가 없습니다.
+                    </td>
+                  </tr>
+                )}
+                {mainGps.length === 0 && costcoGps.length > 0 && (
+                  <tr>
+                    <td colSpan={3} className="text-center text-slate-400 py-4">
+                      (일반 마트 데이터 없음 · 코스트코는 위 별도 표시)
+                    </td>
+                  </tr>
+                )}
+                {display.map((row, i) =>
+                  row.type === "ch" ? (
+                    <tr key={row.g.name} className="hover:bg-sky-50">
+                      <td className="whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => setDetail(row.g)}
+                          className="font-medium text-sky-700 hover:underline text-left"
+                          title="일자별 세부 내역 보기"
+                        >
+                          {row.g.name} 🔍
+                        </button>
+                      </td>
+                      <td className="text-right tabular-nums">{fmt(row.g.supply)}</td>
+                      <td className="text-right tabular-nums text-slate-500">{fmt(row.cum)}</td>
+                    </tr>
+                  ) : (
+                    <tr key={"sub-" + row.brand + i} className="bg-slate-100 font-medium text-sm">
+                      <td className="text-right text-slate-600">{row.brand} 소계</td>
+                      <td className="text-right tabular-nums">{fmt(row.supply)}</td>
+                      <td></td>
+                    </tr>
+                  )
+                )}
+              </tbody>
+              {mainGps.length > 0 && (
+                <tfoot>
+                  <tr className="font-semibold bg-slate-50">
+                    <td>매출 합계 (코스트코 제외)</td>
+                    <td className="text-right">{fmt(total)}</td>
+                    <td className="text-right tabular-nums">{fmt(total)}</td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
           </>
         )}
       </div>
