@@ -343,17 +343,17 @@ export function SalesDashboardBlock() {
   const { notes } = useNotes();
   return (
     <div className="card">
-      <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
+      <div className="flex flex-col gap-2 mb-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-semibold">B2C 매출 현황</h2>
         <div className="flex items-center gap-2">
-          <span className="text-[11px] text-slate-400">상차일자</span>
+          <span className="text-[11px] text-slate-400 whitespace-nowrap">상차일자</span>
           <input
             type="date"
             className="input !py-1 !text-xs max-w-[150px]"
             value={date}
             onChange={(e) => setDate(e.target.value)}
           />
-          <span className="text-[11px] text-slate-400">· 천원</span>
+          <span className="text-[11px] text-slate-400 whitespace-nowrap">· 천원</span>
         </div>
       </div>
       <SalesTable date={date} />
