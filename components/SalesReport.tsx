@@ -135,10 +135,10 @@ function SalesTable({ date }: { date: string }) {
             <th colSpan={4} className="text-center">매출액 (단위: 천원)</th>
           </tr>
           <tr>
-            <th className="text-right">당일</th>
-            <th className="text-right">전일</th>
-            <th className="text-right">당월누계</th>
-            <th className="text-right">전월누계</th>
+            <th className="text-right whitespace-nowrap">당일</th>
+            <th className="text-right whitespace-nowrap">전일</th>
+            <th className="text-right whitespace-nowrap">당월누계</th>
+            <th className="text-right whitespace-nowrap">전월누계</th>
           </tr>
         </thead>
         <tbody>
