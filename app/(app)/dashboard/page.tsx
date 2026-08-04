@@ -19,6 +19,7 @@ import {
 } from "recharts";
 import { dashboardData, serverToday } from "@/lib/actions";
 import { fmt, todayKST, monthKST } from "@/lib/types";
+import { SalesDashboardBlock } from "@/components/SalesReport";
 
 const won = (v: number, decimals = 2) => fmt(v, decimals);
 // KPI 카드: 억원 단위 (소수점 2자리)
@@ -401,6 +402,8 @@ export default function DashboardPage() {
               />
             </div>
           </div>
+
+          <SalesDashboardBlock />
 
           {/* 전체 일자별 매출 */}
           <div className="card overflow-hidden min-w-0" style={panelStyle}>
