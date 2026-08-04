@@ -24,6 +24,7 @@ const BRANDS = [
   "홈플러스",
 ];
 const brandOf = (name: string) => {
+  if (name.startsWith("롯데")) return "롯데"; // 롯데 계열(마트·슈퍼·물갈이 등)은 모두 하나로
   const cands = BRANDS.filter((b) => name.startsWith(b));
   return cands.length ? cands.reduce((a, b) => (b.length > a.length ? b : a)) : name;
 };
