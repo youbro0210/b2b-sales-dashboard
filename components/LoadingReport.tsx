@@ -13,7 +13,7 @@ type Group = { name: string; rows: any[]; supply: number };
 
 // 마트 브랜드(채널명 접두어) — 같은 브랜드 채널끼리 소계로 묶는다
 // 예) 롯데마트 소계 = 롯데마트 + 롯데마트정발행 + 롯데마트물갈이역발행
-const BRANDS = ["롯데마트", "롯데슈퍼", "이마트", "트레이더스", "에브리데이", "홈플러스"];
+const BRANDS = ["롯데마트", "롯데슈퍼", "이마트", "트레이더스", "홈플러스"];
 const brandOf = (name: string) => {
   if (name.startsWith("롯데")) return "롯데"; // 롯데 계열(마트·슈퍼·물갈이 등)은 모두 하나로
   const cands = BRANDS.filter((b) => name.startsWith(b));
