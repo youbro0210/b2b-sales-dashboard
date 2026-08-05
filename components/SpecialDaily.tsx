@@ -58,6 +58,7 @@ export default function SpecialDaily() {
     const rows = channels.map((c) => ({
       load_date: date,
       channel_name: c.name,
+      channel_id: c.id,
       supply_amount: num(vals[c.id]),
     }));
     const res = await bulkSaveLoading(rows);
