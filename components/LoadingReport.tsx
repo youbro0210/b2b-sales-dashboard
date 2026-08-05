@@ -13,20 +13,13 @@ type Group = { name: string; rows: any[]; supply: number };
 
 // 마트 브랜드(채널명 접두어) — 같은 브랜드 채널끼리 소계로 묶는다
 // 예) 롯데마트 소계 = 롯데마트 + 롯데마트정발행 + 롯데마트물갈이역발행
-const BRANDS = [
-  "코스트코",
-  "롯데마트",
-  "롯데슈퍼",
-  "이마트",
-  "트레이더스",
-  "에브리데이",
-  "서원유통",
-  "홈플러스",
-];
+const BRANDS = ["롯데마트", "롯데슈퍼", "이마트", "트레이더스", "홈플러스"];
 const brandOf = (name: string) => {
   if (name.startsWith("롯데")) return "롯데"; // 롯데 계열(마트·슈퍼·물갈이 등)은 모두 하나로
+  if (name.startsWith("에브리데이")) return "이마트"; // 에브리데이는 이마트 계열
   const cands = BRANDS.filter((b) => name.startsWith(b));
-  return cands.length ? cands.reduce((a, b) => (b.length > a.length ? b : a)) : name;
+  if (cands.length) return cands.reduce((a, b) => (b.length > a.length ? b : a));
+  return "기타"; // 그 외(서원유통 등)는 기타 계열
 };
 
 // 코스트코는 마트 합계와 별도로 집계 (합계·누계에서 제외)
