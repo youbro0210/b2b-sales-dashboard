@@ -522,12 +522,18 @@ export async function bulkSaveB2b(
 }
 
 export async function bulkSaveLoading(
-  rows: { load_date: string; channel_name: string; supply_amount: number }[]
+  rows: {
+    load_date: string;
+    channel_name: string;
+    channel_id?: number | null;
+    supply_amount: number;
+  }[]
 ) {
   const clean = rows
     .map((r) => ({
       load_date: r.load_date,
       channel_name: String(r.channel_name ?? "").trim(),
+      channel_id: r.channel_id != null ? Number(r.channel_id) : null,
       supply_amount: Number(r.supply_amount) || 0,
     }))
     .filter((r) => r.load_date && r.channel_name);
@@ -539,33 +545,52 @@ export async function bulkSaveLoading(
     chans.map((c: any) => [String(c.name).trim(), Number(c.id)])
   );
 
-  // 제출된 (일자, 채널명) 조합의 기존 행을 모두 삭제 → 0 포함 덮어쓰기
-  // (채널명 기준으로 지우므로 채널ID 중복이 있어도 옛 값이 남지 않는다)
-  const delDates = clean.map((r) => r.load_date);
-  const delNames = clean.map((r) => r.channel_name);
+  // 1) 채널명 기준으로 (일자, 채널명) 기존 행 삭제
   await sql`
     DELETE FROM loading_amounts
     WHERE (load_date, channel_name) IN (
-      SELECT * FROM unnest(${delDates}::date[], ${delNames}::text[])
+      SELECT * FROM unnest(
+        ${clean.map((r) => r.load_date)}::date[],
+        ${clean.map((r) => r.channel_name)}::text[]
+      )
     )
   `;
 
-  // 0이 아닌 값만 재삽입 (0 = 삭제 처리). 기준정보에 없는 채널은 제외.
+  // 2) 채널ID 기준 삭제 (폼에서 id를 넘긴 경우 - 이름 표기가 달라도 확실히 덮어쓴다)
+  const withId = clean.filter((r) => r.channel_id != null);
+  if (withId.length) {
+    await sql`
+      DELETE FROM loading_amounts
+      WHERE (load_date, channel_id) IN (
+        SELECT * FROM unnest(
+          ${withId.map((r) => r.load_date)}::date[],
+          ${withId.map((r) => r.channel_id as number)}::int[]
+        )
+      )
+    `;
+  }
+
+  // 3) 0이 아닌 값만 재삽입 (0 = 삭제). 기준정보에 없는 채널은 제외.
   const skipped: string[] = [];
-  const ins = clean.filter((r) => {
-    if (r.supply_amount === 0) return false;
-    if (!idByName.has(r.channel_name)) {
-      skipped.push(r.channel_name);
-      return false;
-    }
-    return true;
-  });
+  const ins = clean
+    .filter((r) => r.supply_amount !== 0)
+    .map((r) => {
+      const cid =
+        r.channel_id != null ? r.channel_id : idByName.get(r.channel_name) ?? null;
+      if (cid == null) {
+        skipped.push(r.channel_name);
+        return null;
+      }
+      return { ...r, cid };
+    })
+    .filter((r): r is NonNullable<typeof r> => r !== null);
+
   if (ins.length) {
     await sql`
       INSERT INTO loading_amounts (load_date, channel_id, channel_name, supply_amount)
       SELECT * FROM unnest(
         ${ins.map((r) => r.load_date)}::date[],
-        ${ins.map((r) => idByName.get(r.channel_name)!)}::int[],
+        ${ins.map((r) => r.cid)}::int[],
         ${ins.map((r) => r.channel_name)}::text[],
         ${ins.map((r) => r.supply_amount)}::numeric[]
       )
