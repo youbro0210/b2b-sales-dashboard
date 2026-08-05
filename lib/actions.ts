@@ -523,55 +523,56 @@ export async function bulkSaveB2b(
 
 export async function bulkSaveLoading(
   rows: { load_date: string; channel_name: string; supply_amount: number }[]
-): Promise<{ ok: boolean; count: number; error?: string; skipped?: string[] }> {
-  try {
-    await requireUser();
-    const chans = await sql`select id, name from channels`;
-    const map = new Map(chans.map((c: any) => [String(c.name).trim(), c.id]));
+) {
+  const clean = rows
+    .map((r) => ({
+      load_date: r.load_date,
+      channel_name: String(r.channel_name ?? "").trim(),
+      supply_amount: Number(r.supply_amount) || 0,
+    }))
+    .filter((r) => r.load_date && r.channel_name);
+  if (!clean.length) return { ok: true, count: 0, skipped: [] as string[] };
 
-    const valid = rows.filter((r) => r.load_date);
-    const dates = Array.from(new Set(valid.map((r) => r.load_date)));
+  // 채널명 -> id (기준정보)
+  const chans = (await sql`SELECT id, name FROM channels`) as any[];
+  const idByName = new Map<string, number>(
+    chans.map((c: any) => [String(c.name).trim(), Number(c.id)])
+  );
 
-    // 삽입 대상 준비 (기준정보에 있는 채널 + 금액 있는 행만)
-    const ins: { d: string; cid: number; name: string; amt: number }[] = [];
-    const skipped: string[] = [];
-    for (const r of valid) {
-      const name = String(r.channel_name || "").trim();
-      const cid = map.get(name) ?? null;
-      // 기준정보에 없는 채널은 건너뛴다 (화면에 안 보이는 유령 데이터 방지)
-      if (cid == null) {
-        if (name && !skipped.includes(name)) skipped.push(name);
-        continue;
-      }
-      if (!r.supply_amount) continue;
-      ins.push({ d: r.load_date, cid: Number(cid), name, amt: Number(r.supply_amount) });
+  // 제출된 (일자, 채널명) 조합의 기존 행을 모두 삭제 → 0 포함 덮어쓰기
+  // (채널명 기준으로 지우므로 채널ID 중복이 있어도 옛 값이 남지 않는다)
+  const delDates = clean.map((r) => r.load_date);
+  const delNames = clean.map((r) => r.channel_name);
+  await sql`
+    DELETE FROM loading_amounts
+    WHERE (load_date, channel_name) IN (
+      SELECT * FROM unnest(${delDates}::date[], ${delNames}::text[])
+    )
+  `;
+
+  // 0이 아닌 값만 재삽입 (0 = 삭제 처리). 기준정보에 없는 채널은 제외.
+  const skipped: string[] = [];
+  const ins = clean.filter((r) => {
+    if (r.supply_amount === 0) return false;
+    if (!idByName.has(r.channel_name)) {
+      skipped.push(r.channel_name);
+      return false;
     }
-
-    // 업로드에 포함된 (일자 + 채널) 만 한 번에 지우고 다시 넣는다.
-    // 같은 파일을 여러 번 올려도 중복 누적되지 않고, 업로드에 없는 채널은 건드리지 않는다.
-    const upIds = Array.from(new Set(ins.map((x) => x.cid)));
-    if (upIds.length && dates.length) {
-      await sql`delete from loading_amounts
-                where load_date = any(${dates}::date[])
-                  and channel_id = any(${upIds}::bigint[])`;
-    }
-
-    // 대량 업로드도 한 번의 INSERT 로 처리 (순차 INSERT 시 함수 타임아웃 방지)
-    if (ins.length) {
-      await sql`insert into loading_amounts (load_date, channel_id, channel_name, supply_amount)
-                select * from unnest(
-                  ${ins.map((x) => x.d)}::date[],
-                  ${ins.map((x) => x.cid)}::bigint[],
-                  ${ins.map((x) => x.name)}::text[],
-                  ${ins.map((x) => x.amt)}::numeric[]
-                )`;
-    }
-    return { ok: true, count: ins.length, skipped };
-  } catch (e: any) {
-    return { ok: false, count: 0, error: e?.message ?? "업로드 실패" };
+    return true;
+  });
+  if (ins.length) {
+    await sql`
+      INSERT INTO loading_amounts (load_date, channel_id, channel_name, supply_amount)
+      SELECT * FROM unnest(
+        ${ins.map((r) => r.load_date)}::date[],
+        ${ins.map((r) => idByName.get(r.channel_name)!)}::int[],
+        ${ins.map((r) => r.channel_name)}::text[],
+        ${ins.map((r) => r.supply_amount)}::numeric[]
+      )
+    `;
   }
+  return { ok: true, count: clean.length, skipped: [...new Set(skipped)] };
 }
-
 export async function bulkSaveExport(
   rows: {
     delivery_date: string;
