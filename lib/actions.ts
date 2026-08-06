@@ -505,18 +505,20 @@ export async function bulkSaveB2b(
     await requireUser();
     const custs = await sql`select id, name from customers`;
     const map = new Map(custs.map((c: any) => [String(c.name).trim(), c.id]));
-    let n = 0;
-    for (const r of rows) {
-  // 재업로드/재저장 시 (일자·고객사) 기존 행을 먼저 삭제해 중복·0값을 덮어쓴다
-  {
-    const _pairs = rows
-      .map((r) => [r.sale_date, String(r.customer_name ?? "").trim()] as [string, string])
-      .filter(([dd, cc]) => dd && cc);
-    if (_pairs.length) {
-      await sql`DELETE FROM b2b_sales WHERE (sale_date, customer_name) IN (SELECT * FROM unnest(${_pairs.map((p) => p[0])}::date[], ${_pairs.map((p) => p[1])}::text[]))`;
+
+    const valid = rows.filter((r) => r.sale_date && String(r.customer_name || "").trim());
+    // 업로드에 포함된 (일자 + 거래처) 기존 행을 한 번만 삭제 → 중복 누적 방지·덮어쓰기
+    if (valid.length) {
+      const ds = valid.map((r) => r.sale_date);
+      const ns = valid.map((r) => String(r.customer_name).trim());
+      await sql`delete from b2b_sales
+                where (sale_date, customer_name) in (
+                  select * from unnest(${ds}::date[], ${ns}::text[])
+                )`;
     }
-  }
-      if (!r.sale_date) continue;
+
+    let n = 0;
+    for (const r of valid) {
       const cid = map.get(String(r.customer_name || "").trim()) ?? null;
       await sql`insert into b2b_sales
         (sale_date, customer_id, customer_name, mfg_cost, sales_amount, profit_amount, note)
