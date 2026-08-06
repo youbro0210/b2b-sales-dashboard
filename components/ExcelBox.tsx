@@ -261,14 +261,14 @@ export default function ExcelBox({
           <span className="text-xs text-slate-500 shrink-0">기간</span>
           <input
             type="date"
-            className="input !py-1 !px-2 !text-xs w-[130px] shrink-0"
+            className="input !py-1 !px-2 !text-xs shrink-0 !w-36"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
           />
           <span className="text-xs text-slate-500 shrink-0">~</span>
           <input
             type="date"
-            className="input !py-1 !px-2 !text-xs w-[130px] shrink-0"
+            className="input !py-1 !px-2 !text-xs shrink-0 !w-36"
             value={to}
             onChange={(e) => setTo(e.target.value)}
           />
