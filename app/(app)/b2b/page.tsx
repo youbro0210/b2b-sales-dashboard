@@ -10,6 +10,7 @@ import {
   listB2bByDate,
   listB2bRange,
   saveB2b,
+  bulkSaveB2b,
   deleteB2b,
   serverToday,
 } from "@/lib/actions";
@@ -18,6 +19,7 @@ type Customer = { id: number; name: string };
 type Row = {
   _key: string;
   id?: number;
+  sale_date?: string;
   customer_id: number | null;
   customer_name: string;
   mfg_cost: number;
@@ -34,6 +36,9 @@ export default function B2bPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [mode, setMode] = useState<"day" | "range">("day");
+  const [from, setFrom] = useState(() => todayKST().slice(0, 8) + "01");
+  const [to, setTo] = useState(() => todayKST());
 
   useEffect(() => {
     listCustomers(["b2b", "both"]).then((d) => setCustomers(d as Customer[]));
@@ -69,7 +74,50 @@ export default function B2bPage() {
     fetchRows();
   }, [fetchRows]);
 
-  const addRow = () =>
+  const fetchRange = useCallback(async () => {
+    setLoading(true);
+    const data = (await listB2bRange(from, to)) as any[];
+    setRows(
+      data
+        .map((r) => ({
+          _key: String(r.id),
+          id: r.id,
+          sale_date: ymd(r.sale_date),
+          customer_id: r.customer_id,
+          customer_name: r.customer_name ?? "",
+          mfg_cost: num(r.mfg_cost),
+          sales_amount: num(r.sales_amount),
+          profit_amount: num(r.profit_amount),
+          note: r.note ?? "",
+        }))
+        .sort((a, b) =>
+          a.sale_date === b.sale_date
+            ? a.customer_name.localeCompare(b.customer_name)
+            : (a.sale_date || "").localeCompare(b.sale_date || "")
+        )
+    );
+    setLoading(false);
+  }, [from, to]);
+
+  const saveRange = async () => {
+    setSaving(true);
+    await bulkSaveB2b(
+      rows
+        .filter((r) => r.sale_date && r.customer_name)
+        .map((r) => ({
+          sale_date: r.sale_date as string,
+          customer_name: r.customer_name,
+          mfg_cost: num(r.mfg_cost),
+          sales_amount: num(r.sales_amount),
+          profit_amount: num(r.profit_amount),
+          note: r.note || null,
+        }))
+    );
+    setSaving(false);
+    fetchRange();
+  };
+
+    const addRow = () =>
     setRows((r) => [
       ...r,
       {
@@ -129,15 +177,47 @@ export default function B2bPage() {
         <p className="text-sm text-slate-500">일자별 거래처별 매출·이익 현황</p>
       </div>
 
-      <DateBar date={date} setDate={setDate}>
-        <button className="btn-ghost" onClick={fetchRows} disabled={loading}>
-          {loading ? "조회 중..." : "🔍 조회"}
-        </button>
-        <button className="btn-ghost" onClick={addRow}>+ 행 추가</button>
-        <button className="btn-primary" onClick={save} disabled={saving}>
-          {saving ? "저장 중..." : "저장"}
-        </button>
-      </DateBar>
+      <div className="flex items-center gap-2">
+        <div className="inline-flex rounded-lg border border-slate-200 overflow-hidden">
+          <button
+            className={mode === "day" ? "px-3 py-1.5 text-sm bg-slate-700 text-white" : "px-3 py-1.5 text-sm bg-white text-slate-600"}
+            onClick={() => setMode("day")}
+          >
+            일자별
+          </button>
+          <button
+            className={mode === "range" ? "px-3 py-1.5 text-sm bg-slate-700 text-white" : "px-3 py-1.5 text-sm bg-white text-slate-600"}
+            onClick={() => setMode("range")}
+          >
+            기간
+          </button>
+        </div>
+      </div>
+
+      {mode === "day" ? (
+        <DateBar date={date} setDate={setDate}>
+          <button className="btn-ghost" onClick={fetchRows} disabled={loading}>
+            {loading ? "조회 중..." : "🔍 조회"}
+          </button>
+          <button className="btn-ghost" onClick={addRow}>+ 행 추가</button>
+          <button className="btn-primary" onClick={save} disabled={saving}>
+            {saving ? "저장 중..." : "저장"}
+          </button>
+        </DateBar>
+      ) : (
+        <div className="card flex items-center gap-2 flex-wrap">
+          <input type="date" className="input max-w-[160px]" value={from} onChange={(e) => setFrom(e.target.value)} />
+          <span className="text-slate-400">~</span>
+          <input type="date" className="input max-w-[160px]" value={to} onChange={(e) => setTo(e.target.value)} />
+          <button className="btn-ghost" onClick={fetchRange} disabled={loading}>
+            {loading ? "조회 중..." : "🔍 조회"}
+          </button>
+          <button className="btn-primary" onClick={saveRange} disabled={saving}>
+            {saving ? "저장 중..." : "저장"}
+          </button>
+          <span className="ml-auto text-xs text-slate-500">기간 내 모든 날짜를 한 번에 표시·수정합니다.</span>
+        </div>
+      )}
 
       <div className="card">
         <ExcelBox
@@ -186,6 +266,7 @@ export default function B2bPage() {
           <table className="data">
             <thead>
               <tr>
+                {mode === "range" && <th style={{ minWidth: 110 }}>일자</th>}
                 <th style={{ minWidth: 200 }}>고객사명</th>
                 <th className="text-right">제조원가</th>
                 <th className="text-right">매출액</th>
@@ -198,8 +279,8 @@ export default function B2bPage() {
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center text-slate-400 py-6">
-                    데이터가 없습니다. “행 추가”로 입력하세요.
+                  <td colSpan={mode === "range" ? 8 : 7} className="text-center text-slate-400 py-6">
+                    {mode === "range" ? "해당 기간에 데이터가 없습니다." : "데이터가 없습니다. “행 추가”로 입력하세요."}
                   </td>
                 </tr>
               )}
@@ -209,6 +290,9 @@ export default function B2bPage() {
                   : "0.0";
                 return (
                   <tr key={r._key}>
+                    {mode === "range" && (
+                      <td className="whitespace-nowrap text-slate-600">{r.sale_date}</td>
+                    )}
                     <td>
                       <select
                         className="input"
@@ -245,6 +329,7 @@ export default function B2bPage() {
             {rows.length > 0 && (
               <tfoot>
                 <tr className="font-semibold bg-slate-50">
+                  {mode === "range" && <td></td>}
                   <td>합계</td>
                   <td className="text-right">{fmt(totals.mfg)}</td>
                   <td className="text-right">{fmt(totals.sales)}</td>
