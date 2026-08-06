@@ -150,15 +150,29 @@ export default function ExcelBox({
       let res: { ok: boolean; count: number; error?: string; skipped?: string[] };
       if (kind === "b2b") {
         const rows = json
-          .map((r) => ({
-            sale_date: toDate(r["일자"]),
-            customer_name: String(r["고객사명"] ?? "").trim(),
-            mfg_cost: num(r["제조원가"]),
-            sales_amount: num(r["매출액"]),
-            profit_amount: num(r["매출이익액"]),
-            note: String(r["비고"] ?? "").trim() || null,
-          }))
-          .filter((r) => r.sale_date);
+          .map((raw: any) => {
+            const r: any = {};
+            for (const k in raw) r[String(k).trim()] = (raw as any)[k];
+            const vals = Object.values(r);
+            const pick = (...names: string[]) => {
+              for (const nm of names)
+                if (r[nm] !== undefined && r[nm] !== "") return r[nm];
+              return "";
+            };
+            const byPos = (i: number) => (vals[i] !== undefined ? vals[i] : "");
+            const mfgV = pick("제조원가", "원가", "매입원가", "제조 원가");
+            const salesV = pick("매출액", "매출", "공급가액", "매출 액");
+            const profV = pick("매출이익액", "매출이익", "이익액", "이익");
+            return {
+              sale_date: toDate(pick("일자", "날짜") || byPos(0)),
+              customer_name: String(pick("고객사명", "고객사", "거래처명", "거래처") || byPos(1) || "").trim(),
+              mfg_cost: num(mfgV !== "" ? mfgV : byPos(2)),
+              sales_amount: num(salesV !== "" ? salesV : byPos(3)),
+              profit_amount: num(profV !== "" ? profV : byPos(4)),
+              note: String(pick("비고") || byPos(5) || "").trim() || null,
+            };
+          })
+          .filter((r) => r.sale_date && r.customer_name);
         res = await bulkSaveB2b(rows);
       } else if (kind === "loading") {
         const rows = json
