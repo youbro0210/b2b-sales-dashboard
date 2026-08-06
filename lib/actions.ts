@@ -507,6 +507,15 @@ export async function bulkSaveB2b(
     const map = new Map(custs.map((c: any) => [String(c.name).trim(), c.id]));
     let n = 0;
     for (const r of rows) {
+  // 재업로드/재저장 시 (일자·고객사) 기존 행을 먼저 삭제해 중복·0값을 덮어쓴다
+  {
+    const _pairs = rows
+      .map((r) => [r.sale_date, String(r.customer_name ?? "").trim()] as [string, string])
+      .filter(([dd, cc]) => dd && cc);
+    if (_pairs.length) {
+      await sql`DELETE FROM b2b_sales WHERE (sale_date, customer_name) IN (SELECT * FROM unnest(${_pairs.map((p) => p[0])}::date[], ${_pairs.map((p) => p[1])}::text[]))`;
+    }
+  }
       if (!r.sale_date) continue;
       const cid = map.get(String(r.customer_name || "").trim()) ?? null;
       await sql`insert into b2b_sales
