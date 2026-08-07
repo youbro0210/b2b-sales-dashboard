@@ -110,7 +110,22 @@ export default function LoadingBoard({
           엑셀 업로드 시 <b>채널명</b>·일자 기준으로 해당 데이터를 덮어씁니다.
           (양식: 일자 / 구분 / 채널명 / 공급가액)
         </p>
-        <ExcelBox kind="loading" templateFile={`${title}_업로드양식.xlsx`} onDone={load} />
+        <ExcelBox
+          kind="loading"
+          templateFile={`${title}_업로드양식.xlsx`}
+          onDone={load}
+          getTemplateRows={
+            title.includes("오프라인")
+              ? () =>
+                  channels.map((c) => [
+                    todayKST(),
+                    c.group_name || "오프라인",
+                    c.name,
+                    0,
+                  ])
+              : undefined
+          }
+        />
       </div>
 
       <div className="card overflow-x-auto">
