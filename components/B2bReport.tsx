@@ -29,6 +29,8 @@ export default function B2bReport() {
   const [page, setPage] = useState(0);
   const [searched, setSearched] = useState(false);
   const [detail, setDetail] = useState<Group | null>(null); // 세부 내역 팝업 대상
+  const [sortKey, setSortKey] = useState("");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   useEffect(() => {
     listCustomers(["b2b", "both"]).then((d) => setCustomers(d as any[]));
@@ -72,6 +74,26 @@ export default function B2bReport() {
     return g;
   }, [rows]);
 
+  // 컬럼 정렬 (거래처 그룹 단위)
+  const sortedGroups = useMemo<Group[]>(() => {
+    if (!sortKey) return groups;
+    const val = (g: Group): string | number => {
+      switch (sortKey) {
+        case "name": return g.name;
+        case "mfg": return g.mfg;
+        case "sales": return g.sales;
+        case "profit": return g.profit;
+        case "rate": return g.sales ? g.profit / g.sales : 0;
+        default: return 0;
+      }
+    };
+    return [...groups].sort((a, b) => {
+      const va = val(a), vb = val(b);
+      const c = typeof va === "string" ? va.localeCompare(vb as string) : (va as number) - (vb as number);
+      return sortDir === "asc" ? c : -c;
+    });
+  }, [groups, sortKey, sortDir]);
+
   const t = rows.reduce(
     (a, r) => ({
       mfg: a.mfg + num(r.mfg_cost),
@@ -85,14 +107,21 @@ export default function B2bReport() {
   // 표시 순서대로 누계(러닝 합계) 매출액 계산
   const groupsCum = useMemo(() => {
     let run = 0;
-    return groups.map((g) => {
+    return sortedGroups.map((g) => {
       run += g.sales;
       return { g, cumSales: run };
     });
-  }, [groups]);
+  }, [sortedGroups]);
 
   const pageCount = Math.max(1, Math.ceil(groups.length / GPAGE));
   const pageGroups = groupsCum.slice(page * GPAGE, (page + 1) * GPAGE);
+
+  const toggleSort = (key: string) => {
+    if (sortKey === key) setSortDir((p) => (p === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir("desc"); }
+    setPage(0);
+  };
+  const arrow = (key: string) => (sortKey === key ? (sortDir === "asc" ? " ▲" : " ▼") : "");
 
   const download = () => {
     const aoa: any[] = [
@@ -175,11 +204,11 @@ export default function B2bReport() {
             <table className="data celled">
               <thead>
                 <tr>
-                  <th style={{ minWidth: 160 }}>고객사명</th>
-                  <th className="text-right">제조원가</th>
-                  <th className="text-right">매출액</th>
-                  <th className="text-right">매출이익액</th>
-                  <th className="text-right">이익율</th>
+                  <th className="cursor-pointer select-none" style={{ minWidth: 160 }} onClick={() => toggleSort("name")}>고객사명{arrow("name")}</th>
+                  <th className="text-right cursor-pointer select-none" onClick={() => toggleSort("mfg")}>제조원가{arrow("mfg")}</th>
+                  <th className="text-right cursor-pointer select-none" onClick={() => toggleSort("sales")}>매출액{arrow("sales")}</th>
+                  <th className="text-right cursor-pointer select-none" onClick={() => toggleSort("profit")}>매출이익액{arrow("profit")}</th>
+                  <th className="text-right cursor-pointer select-none" onClick={() => toggleSort("rate")}>이익율{arrow("rate")}</th>
                   <th className="text-right">누계매출액</th>
                 </tr>
               </thead>
