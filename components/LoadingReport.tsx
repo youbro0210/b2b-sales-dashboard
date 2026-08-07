@@ -24,6 +24,9 @@ const brandOf = (name: string) => {
 // 코스트코는 마트 합계와 별도로 집계 (합계·누계에서 제외)
 const isCostco = (name: string) => name.startsWith("코스트코");
 
+// 고정값 채널: 지정 채널은 날짜 입력과 무관하게 항상 지정 금액으로 표시한다
+const FIXED: Record<string, number> = { "롯데_물갈이_역발행": 186672 };
+
 // B2C 오프라인 / 온라인 현황
 // 조회 시 채널(판매처)별 합계 + 누계를 먼저 보여주고, 채널명 클릭 시 일자별 세부 내역 팝업
 export default function LoadingReport({
@@ -113,8 +116,15 @@ export default function LoadingReport({
       cur.rows.push(r);
       cur.supply += num(r.supply_amount);
     }
+    // 고정값 채널 반영 (이 현황에 속한 채널만): 값을 지정 금액으로 덮어쓴다
+    for (const nm of Object.keys(FIXED)) {
+      if (!chanList.includes(nm)) continue;
+      const found = g.find((x) => x.name === nm);
+      if (found) found.supply = FIXED[nm];
+      else g.push({ name: nm, rows: [], supply: FIXED[nm] });
+    }
     return g;
-  }, [rows]);
+  }, [rows, chanList]);
 
   // 코스트코는 별도 집계 → 일반 마트(main)와 분리
   const mainGps = useMemo(() => gps.filter((g) => !isCostco(g.name)), [gps]);
